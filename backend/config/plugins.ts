@@ -1,4 +1,9 @@
-export default ({ env }) => ({
+interface Env {
+  (variable: string): string;
+  bool(variable: string, defaultValue: boolean): boolean;
+}
+
+export default ({ env }: { env: Env }) => ({
   seo: {
     enabled: true,
   },
