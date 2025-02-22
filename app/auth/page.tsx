@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
@@ -12,6 +12,11 @@ import { Film, Clapperboard, Star } from 'lucide-react'
 export default function AuthPage() {
   const router = useRouter()
   const [tab, setTab] = useState<'sign-in' | 'sign-up'>('sign-in')
+  const [origin, setOrigin] = useState<string>('')
+
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
 
   return (
     <div className="container max-w-lg mx-auto px-4 py-8 md:py-16">
@@ -45,31 +50,33 @@ export default function AuthPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Auth
-            supabaseClient={supabase}
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: 'rgb(var(--primary))',
-                    brandAccent: 'rgb(var(--primary))',
+          {origin && (
+            <Auth
+              supabaseClient={supabase}
+              appearance={{
+                theme: ThemeSupa,
+                variables: {
+                  default: {
+                    colors: {
+                      brand: 'rgb(var(--primary))',
+                      brandAccent: 'rgb(var(--primary))',
+                    },
                   },
                 },
-              },
-              className: {
-                container: 'w-full',
-                button: 'w-full rounded-md px-4 py-2',
-                label: 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
-                input: 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                message: 'text-sm text-red-500 mt-2',
-              },
-            }}
-            view={tab === 'sign-in' ? 'sign_in' : 'sign_up'}
-            showLinks={false}
-            providers={[]}
-            redirectTo={`${window.location.origin}/profile`}
-          />
+                className: {
+                  container: 'w-full',
+                  button: 'w-full rounded-md px-4 py-2',
+                  label: 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
+                  input: 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                  message: 'text-sm text-red-500 mt-2',
+                },
+              }}
+              view={tab === 'sign-in' ? 'sign_in' : 'sign_up'}
+              showLinks={false}
+              providers={[]}
+              redirectTo={`${origin}/profile`}
+            />
+          )}
         </CardContent>
       </Card>
 
