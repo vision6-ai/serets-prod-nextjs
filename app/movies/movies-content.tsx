@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { MovieList } from '@/components/movies/movie-list'
 import { MovieFilters } from '@/components/movies/movie-filters'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 
 interface Movie {
   id: string
@@ -17,7 +17,7 @@ interface Movie {
 }
 
 interface Filters {
-  genres: string[]
+  genres: Array<string>
   year?: number | null
   rating?: number | null
   sortBy: 'release_date' | 'rating' | 'title'
@@ -28,9 +28,13 @@ export function MoviesContent() {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  
   const currentFilters = useRef<Filters>({
-    genres: [],
+    genres: Array<string>(),
     sortBy: 'release_date',
     sortOrder: 'desc'
   })
@@ -114,11 +118,11 @@ export function MoviesContent() {
   }, [category, supabase])
 
   useEffect(() => {
-    const initialFilters = {
+    const initialFilters: Filters = {
       genres: [],
       sortBy: category === 'top-rated' ? 'rating' : 'release_date',
       sortOrder: 'desc'
-    } as const
+    }
 
     fetchMovies(initialFilters)
   }, [category, fetchMovies])

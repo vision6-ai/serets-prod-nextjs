@@ -3,6 +3,34 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 
+interface Actor {
+  id: string
+  name: string
+  hebrew_name: string | null
+  bio: string | null
+  photo_url: string | null
+  slug: string
+}
+
+interface MovieData {
+  id: string
+  title: string
+  hebrew_title: string | null
+  release_date: string | null
+  poster_url: string | null
+  rating: number | null
+  slug: string
+}
+
+interface MovieActorJoin {
+  role: string
+  movies: MovieData
+}
+
+interface MovieWithRole extends MovieData {
+  role: string
+}
+
 export const revalidate = 3600
 
 async function getActorData(slug: string) {
@@ -29,7 +57,7 @@ async function getActorData(slug: string) {
     return null
   }
 
-  const { data: movies } = await supabase
+  const { data: movieActors } = await supabase
     .from('movie_actors')
     .select(`
       role,
@@ -45,9 +73,19 @@ async function getActorData(slug: string) {
     `)
     .eq('actor_id', actor.id)
 
+  const typedMovieActors = (movieActors || []) as unknown as { 
+    role: string; 
+    movies: MovieData;
+  }[]
+
+  const movies: MovieWithRole[] = typedMovieActors.map(m => ({
+    ...m.movies,
+    role: m.role
+  }))
+
   return {
-    actor,
-    movies: movies?.map(m => ({ ...m.movies, role: m.role })) || []
+    actor: actor as Actor,
+    movies
   }
 }
 

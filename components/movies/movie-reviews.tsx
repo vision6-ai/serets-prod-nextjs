@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react'
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Star, ThumbsUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,8 +15,14 @@ import {
 } from '@/components/ui/dialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { AuthDialog } from '@/components/auth/auth-dialog'
-import { supabase } from '@/lib/supabase'
+import { createBrowserClient } from '@supabase/ssr'
 import { useToast } from '@/hooks/use-toast'
+
+interface UserProfile {
+  username: string
+  display_name: string | null
+  avatar_url: string | null
+}
 
 interface Review {
   id: string
@@ -23,11 +31,7 @@ interface Review {
   content: string | null
   helpful_votes: number
   created_at: string
-  user_profile: {
-    username: string
-    display_name: string | null
-    avatar_url: string | null
-  } | null
+  user_profile: UserProfile | null
 }
 
 interface MovieReviewsProps {
@@ -46,11 +50,12 @@ export function MovieReviews({ movieId, userId }: MovieReviewsProps) {
   const [reviewRating, setReviewRating] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchReviews()
-  }, [movieId])
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
-  async function fetchReviews() {
+  const fetchReviews = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('reviews')
@@ -72,9 +77,14 @@ export function MovieReviews({ movieId, userId }: MovieReviewsProps) {
 
       if (error) throw error
 
-      setReviews(data || [])
+      const typedData = data?.map(review => ({
+        ...review,
+        user_profile: review.user_profile?.[0] || null
+      })) as Review[]
+
+      setReviews(typedData || [])
       if (userId) {
-        const userReview = data?.find(review => review.user_id === userId) || null
+        const userReview = typedData?.find(review => review.user_id === userId) || null
         setUserReview(userReview)
         if (userReview) {
           setReviewContent(userReview.content || '')
@@ -86,7 +96,11 @@ export function MovieReviews({ movieId, userId }: MovieReviewsProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [movieId, userId, supabase])
+
+  useEffect(() => {
+    fetchReviews()
+  }, [fetchReviews])
 
   const handleReviewSubmit = async () => {
     if (!userId) {
