@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ModeToggle } from '@/components/mode-toggle'
@@ -18,7 +19,7 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu'
 import { cn } from '@/lib/utils'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 
 interface Genre {
   id: string
@@ -37,7 +38,10 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [categories, setCategories] = useState<Genre[]>([])
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     const handleScroll = () => {
@@ -71,11 +75,23 @@ export default function Header() {
     )}>
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-2xl font-bold hidden md:block">
-            SERETS.CO.IL
+          <Link href="/" className="hidden md:block">
+            <Image
+              src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//serets.co.il-logo-v1.svg"
+              alt="SERETS.CO.IL"
+              width={120}
+              height={32}
+              className="h-8 w-auto"
+            />
           </Link>
-          <Link href="/" className="text-2xl font-bold md:hidden">
-            SERETS
+          <Link href="/" className="md:hidden">
+            <Image
+              src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//serets.co.il-logo-v1.svg"
+              alt="SERETS"
+              width={90}
+              height={32}
+              className="h-8 w-auto"
+            />
           </Link>
           
           <NavigationMenu className="hidden md:flex">
