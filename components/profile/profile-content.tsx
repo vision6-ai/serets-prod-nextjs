@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { supabase } from '@/lib/supabase'
+import { createBrowserClient } from '@supabase/ssr'
 import { Star, Clock, ThumbsUp } from 'lucide-react'
 
 interface UserProfile {
@@ -17,33 +17,56 @@ interface UserProfile {
   location: string | null
 }
 
+interface Movie {
+  id: string
+  title: string
+  poster_url: string | null
+  slug: string
+  release_date: string | null
+}
+
 interface WishlistMovie {
   id: string
-  movie: {
-    id: string
-    title: string
-    hebrew_title: string | null
-    poster_url: string | null
-    slug: string
-    release_date: string | null
-  }
+  movie: Movie
   notes: string | null
   created_at: string
 }
 
 interface UserReview {
   id: string
-  movie: {
-    id: string
-    title: string
-    hebrew_title: string | null
-    poster_url: string | null
-    slug: string
-  }
+  movie: Movie
   rating: number
   content: string | null
   helpful_votes: number
   created_at: string
+}
+
+type DatabaseWishlistMovie = {
+  id: string
+  notes: string | null
+  created_at: string
+  movie: {
+    id: string
+    title: string
+    poster_url: string | null
+    slug: string
+    release_date: string | null
+  }
+}
+
+type DatabaseReview = {
+  id: string
+  rating: number
+  content: string | null
+  helpful_votes: number
+  created_at: string
+  movie: {
+    id: string
+    title: string
+    poster_url: string | null
+    slug: string
+    release_date: string | null
+  }
 }
 
 export function ProfileContent({ userId }: { userId: string }) {
@@ -51,6 +74,11 @@ export function ProfileContent({ userId }: { userId: string }) {
   const [wishlist, setWishlist] = useState<WishlistMovie[]>([])
   const [reviews, setReviews] = useState<UserReview[]>([])
   const [loading, setLoading] = useState(true)
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     async function fetchProfileData() {
@@ -70,10 +98,9 @@ export function ProfileContent({ userId }: { userId: string }) {
               id,
               notes,
               created_at,
-              movie:movies (
+              movie:movies!inner (
                 id,
                 title,
-                hebrew_title,
                 poster_url,
                 slug,
                 release_date
@@ -91,12 +118,12 @@ export function ProfileContent({ userId }: { userId: string }) {
               content,
               helpful_votes,
               created_at,
-              movie:movies (
+              movie:movies!inner (
                 id,
                 title,
-                hebrew_title,
                 poster_url,
-                slug
+                slug,
+                release_date
               )
             `)
             .eq('user_id', userId)
@@ -108,8 +135,38 @@ export function ProfileContent({ userId }: { userId: string }) {
         if (reviewsData.error) throw reviewsData.error
 
         setProfile(profileData.data || null)
-        setWishlist(wishlistData.data || [])
-        setReviews(reviewsData.data || [])
+
+        // Transform wishlist data
+        const wishlistItems = (wishlistData.data || []) as unknown as DatabaseWishlistMovie[]
+        setWishlist(wishlistItems.map(item => ({
+          id: item.id,
+          notes: item.notes,
+          created_at: item.created_at,
+          movie: {
+            id: item.movie.id,
+            title: item.movie.title,
+            poster_url: item.movie.poster_url,
+            slug: item.movie.slug,
+            release_date: item.movie.release_date
+          }
+        })))
+
+        // Transform review data
+        const reviewItems = (reviewsData.data || []) as unknown as DatabaseReview[]
+        setReviews(reviewItems.map(item => ({
+          id: item.id,
+          rating: item.rating,
+          content: item.content,
+          helpful_votes: item.helpful_votes,
+          created_at: item.created_at,
+          movie: {
+            id: item.movie.id,
+            title: item.movie.title,
+            poster_url: item.movie.poster_url,
+            slug: item.movie.slug,
+            release_date: item.movie.release_date
+          }
+        })))
       } catch (error) {
         console.error('Error fetching profile data:', error)
       } finally {
@@ -118,7 +175,7 @@ export function ProfileContent({ userId }: { userId: string }) {
     }
 
     fetchProfileData()
-  }, [userId])
+  }, [userId, supabase])
 
   if (loading) {
     return <div>Loading...</div>
@@ -203,11 +260,6 @@ export function ProfileContent({ userId }: { userId: string }) {
                         >
                           {item.movie.title}
                         </Link>
-                        {item.movie.hebrew_title && (
-                          <div className="text-muted-foreground">
-                            {item.movie.hebrew_title}
-                          </div>
-                        )}
                         {item.movie.release_date && (
                           <div className="text-sm text-muted-foreground mt-1">
                             Release Date:{' '}
@@ -263,11 +315,6 @@ export function ProfileContent({ userId }: { userId: string }) {
                         >
                           {review.movie.title}
                         </Link>
-                        {review.movie.hebrew_title && (
-                          <div className="text-muted-foreground">
-                            {review.movie.hebrew_title}
-                          </div>
-                        )}
                         <div className="flex items-center gap-2 mt-1">
                           <Star className="w-4 h-4 text-yellow-500" />
                           <span className="font-semibold">{review.rating}/10</span>
