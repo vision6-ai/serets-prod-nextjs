@@ -1,15 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  experimental: {
-    serverComponentsExternalPackages: ['@supabase/ssr'],
-    optimizePackageImports: ['@radix-ui/react-icons', 'framer-motion'],
-  },
   images: {
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'llasjkahpdovjshvroky.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'image.tmdb.org',
       },
       {
         protocol: 'https',
@@ -19,12 +19,18 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ['@supabase/ssr'],
+    optimizePackageImports: ['@radix-ui/react-icons', 'framer-motion']
   },
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      "react": require.resolve("react"),
-    };
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        "react": require.resolve("react"),
+      };
+    }
     return config;
   },
 }
