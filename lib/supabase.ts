@@ -1,28 +1,20 @@
-'use client'
+import { createBrowserClient } from '@supabase/ssr'
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing required Supabase environment variables. Please check your .env file.');
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL')
+}
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY')
 }
 
-// Create Supabase client with retries and timeouts
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  global: {
-    headers: { 'x-application-name': 'serets' }
-  },
-  db: {
-    schema: 'public'
-  }
-});
+// Create a single supabase client for interacting with your database
+export const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+)
 
-// Create admin client if service role key is available
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Log the configuration to verify the values
+console.log('Supabase Configuration:', {
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+})

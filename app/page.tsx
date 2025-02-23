@@ -4,17 +4,10 @@ import Link from 'next/link'
 import { MovieSections } from '@/components/movies/movie-sections'
 import { FeaturedActors } from '@/components/featured-actors'
 import { MovieSkeleton, ActorSkeleton } from '@/components/skeletons'
-import { SEO } from '@/components/seo'
 
 export default function HomePage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <SEO
-        title="SERETS.CO.IL - Israeli Movie Database"
-        description="Discover the best of Israeli cinema. Browse movies, actors, and reviews."
-        keywords={['Israeli movies', 'Israeli cinema', 'Hebrew movies', 'Israeli actors']}
-      />
-
       {/* Hero Section */}
       <section className="text-center py-16 md:py-24">
         <h1 className="text-4xl md:text-6xl font-bold mb-6">
