@@ -9,6 +9,7 @@ import { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://serets.co.il'),
   title: {
     default: 'SERETS.CO.IL - Israeli Movie Database',
     template: '%s | SERETS.CO.IL'

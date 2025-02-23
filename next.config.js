@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  experimental: {
+    serverComponentsExternalPackages: ['@supabase/ssr'],
+    optimizePackageImports: ['@radix-ui/react-icons', 'framer-motion'],
+  },
   images: {
     remotePatterns: [
       {
