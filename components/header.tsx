@@ -81,7 +81,8 @@ export default function Header() {
               alt="SERETS.CO.IL"
               width={120}
               height={32}
-              className="h-8 w-auto"
+              style={{ width: 'auto', height: '32px' }}
+              priority
             />
           </Link>
           <Link href="/" className="md:hidden">
@@ -90,7 +91,8 @@ export default function Header() {
               alt="SERETS"
               width={90}
               height={32}
-              className="h-8 w-auto"
+              style={{ width: 'auto', height: '32px' }}
+              priority
             />
           </Link>
           
