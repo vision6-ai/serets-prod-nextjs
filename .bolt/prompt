@@ -1,0 +1,32 @@
+🚀 Bolt.new Project Guideline for AI Development  
+
+📌 General Principles:  
+1. **Develop Step by Step** – Implement features in **small, testable pieces** to maintain stability. No large-scale changes at once.  
+2. **Focus on Performance & SEO** – Use **Next.js best practices**, including:  
+   - **Server-side rendering (SSR) & static site generation (SSG)** where appropriate.  
+   - **Lazy loading & code splitting** for optimal page speed.  
+   - **Optimized images & caching** to reduce load time.  
+   - **SEO-friendly structure** (meta tags, structured data, sitemaps).  
+3. **AI Must Ask Before Writing Code** – No new development should happen **without first explaining**:  
+   - **Why the feature is needed.**  
+   - **The best approach based on existing technologies.**  
+   - **How it integrates into the current project.**  
+4. **Test Everything Before Deployment** – Every new piece of code must go through:  
+   - **Unit tests** for functionality.  
+   - **Performance tests** to ensure site speed is not impacted.  
+   - **SEO checks** to validate optimization efforts.  
+   - **Manual review** before pushing to production.  
+
+📢 Workflow for AI Development:  
+- **Step 1:** AI proposes a feature/update with reasoning.  
+- **Step 2:** We approve/reject or modify the approach.  
+- **Step 3:** AI writes the smallest possible unit of code for the feature.  
+- **Step 4:** Tests are run (automated + manual review).  
+- **Step 5:** If tests pass, merge the change and continue.  
+
+🔍 Additional Notes:  
+- **No unnecessary libraries** – Use minimal dependencies for speed and security.  
+- **Ensure compatibility** – The code must work with **Next.js, Supabase, and Vercel deployment.**  
+- **Document everything** – AI should generate clear documentation for all new code.  
+
+📌 **Final Rule:** **If in doubt, ask before coding.**
