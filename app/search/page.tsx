@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { MovieList } from '@/components/movies/movie-list'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -15,6 +15,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+// Mark this page as dynamic to prevent pre-rendering issues
+export const dynamic = "force-dynamic";
+
 interface Movie {
   id: string
   title: string
@@ -25,7 +28,7 @@ interface Movie {
   slug: string
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const searchParams = useSearchParams()
   const initialQuery = searchParams.get('q') || ''
   const initialLocation = searchParams.get('location') || 'all'
@@ -154,5 +157,23 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  )
+}
+
+// Wrap the component that uses useSearchParams in a Suspense boundary
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6">Search Results</h1>
+        <div className="min-h-[400px] flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-muted-foreground">Loading search results...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <SearchPageContent />
+    </Suspense>
   )
 }
