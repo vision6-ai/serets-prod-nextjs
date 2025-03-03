@@ -1,0 +1,5 @@
+# Ignore only specific files/directories
+.git
+.github
+.vscode
+node_modules 

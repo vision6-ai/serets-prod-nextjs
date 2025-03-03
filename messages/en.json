@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "title": "SERETS.CO.IL - Israeli Movie Database",
+    "description": "Discover the best of Israeli cinema. Browse movies, actors, and reviews.",
+    "keywords": "Israeli movies,Israeli cinema,Hebrew movies,Israeli actors"
+  },
+  "navigation": {
+    "home": "Home",
+    "movies": "Movies",
+    "actors": "Actors",
+    "blog": "Blog",
+    "shorts": "Shorts",
+    "signIn": "Sign In",
+    "latestReleases": "Latest Releases",
+    "topRated": "Top Rated",
+    "categories": "Categories",
+    "theaters": "Theaters",
+    "shortsDescription": "Watch the latest Israeli movie trailers in an immersive vertical feed",
+    "latestreleases": "Latest Releases",
+    "toprated": "Top Rated",
+    "awardwinners": "Award Winners",
+    "comingsoon": "Coming Soon"
+  },
+  "common": {
+    "loading": "Loading...",
+    "noResults": "No results found",
+    "viewAll": "View All",
+    "readMore": "Read More",
+    "pageNotFound": "Page Not Found",
+    "pageNotFoundDesc": "The page you're looking for doesn't exist or has been removed.",
+    "error": "Error",
+    "errorDesc": "An error occurred while loading this page.",
+    "tryAgain": "Try again",
+    "goHome": "Go home",
+    "language": "Language"
+  },
+  "home": {
+    "hero": {
+      "title": "Discover Israeli Cinema",
+      "subtitle": "Your gateway to the world of Israeli movies, actors, and stories",
+      "browseMovies": "Browse Movies",
+      "meetActors": "Meet the Actors"
+    }
+  },
+  "theaters": {
+    "theaters": "Theaters",
+    "searchTheaters": "Search theaters by name or location...",
+    "noTheatersFound": "No theaters found matching your search.",
+    "noImageAvailable": "No image available",
+    "viewTheater": "View Theater",
+    "nowShowing": "Now Showing",
+    "theaterInfo": "Theater Info",
+    "pastScreenings": "Past Screenings",
+    "format": "Format",
+    "allFormats": "All Formats",
+    "genre": "Genre",
+    "allGenres": "All Genres",
+    "resetFilters": "Reset Filters",
+    "noMoviesFilters": "No movies found matching your filters.",
+    "clearFilters": "Clear filters",
+    "about": "About",
+    "amenities": "Amenities",
+    "viewOnMap": "View on Map",
+    "noPastScreenings": "No past screenings available.",
+    "minutes": "min",
+    "showtimesFor": "Showtimes for",
+    "noShowtimesDate": "No showtimes available for this date",
+    "confirmBooking": "Confirm Booking",
+    "bookingDescription": "You are about to book tickets for the following showtime:",
+    "date": "Date",
+    "time": "Time",
+    "hall": "Hall",
+    "price": "Price",
+    "availableSeats": "Available Seats",
+    "of": "of",
+    "cancel": "Cancel",
+    "continueToBooking": "Continue to Booking",
+    "selectTheater": "Select a theater",
+    "learnMore": "Learn More"
+  }
+}

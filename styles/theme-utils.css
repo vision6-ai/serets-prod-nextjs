@@ -1,0 +1,147 @@
+/* Theme Utilities */
+
+/* Custom color variables for light/dark mode */
+:root {
+  /* Light mode colors */
+  --color-primary-light: 0 0% 9%;
+  --color-primary-dark: 0 0% 98%;
+  
+  --color-background-light: 0 0% 100%;
+  --color-background-dark: 0 0% 3.9%;
+  
+  --color-foreground-light: 0 0% 3.9%;
+  --color-foreground-dark: 0 0% 98%;
+  
+  --color-muted-light: 0 0% 96.1%;
+  --color-muted-dark: 0 0% 14.9%;
+  
+  --color-muted-foreground-light: 0 0% 45.1%;
+  --color-muted-foreground-dark: 0 0% 63.9%;
+  
+  --color-card-light: 0 0% 100%;
+  --color-card-dark: 0 0% 3.9%;
+  
+  --color-card-foreground-light: 0 0% 3.9%;
+  --color-card-foreground-dark: 0 0% 98%;
+  
+  --color-border-light: 0 0% 89.8%;
+  --color-border-dark: 0 0% 14.9%;
+  
+  --color-input-light: 0 0% 89.8%;
+  --color-input-dark: 0 0% 14.9%;
+  
+  --color-accent-light: 0 0% 96.1%;
+  --color-accent-dark: 0 0% 14.9%;
+  
+  --color-accent-foreground-light: 0 0% 9%;
+  --color-accent-foreground-dark: 0 0% 98%;
+  
+  /* Theater-specific colors */
+  --theater-primary: 215 100% 50%;
+  --theater-secondary: 215 100% 60%;
+  --theater-accent: 215 100% 70%;
+  
+  /* Transition settings */
+  --theme-transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
+}
+
+/* Apply theme transition to all elements */
+* {
+  transition: var(--theme-transition);
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  :root {
+    --color-primary-light: 0 0% 0%;
+    --color-primary-dark: 0 0% 100%;
+    
+    --color-background-light: 0 0% 100%;
+    --color-background-dark: 0 0% 0%;
+    
+    --color-foreground-light: 0 0% 0%;
+    --color-foreground-dark: 0 0% 100%;
+    
+    --color-border-light: 0 0% 0%;
+    --color-border-dark: 0 0% 100%;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Theme-specific focus styles */
+.theme-focus-visible:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.dark .theme-focus-visible:focus-visible {
+  outline-color: hsl(var(--primary-foreground));
+}
+
+/* Improved contrast for text on various backgrounds */
+.dark .improved-contrast-text {
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.light .improved-contrast-text {
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* Theater-specific theme utilities */
+.theater-gradient-light {
+  background: linear-gradient(135deg, 
+    hsla(var(--theater-primary), 0.05) 0%, 
+    hsla(var(--theater-secondary), 0.1) 50%, 
+    hsla(var(--background), 0.8) 100%
+  );
+}
+
+.theater-gradient-dark {
+  background: linear-gradient(135deg, 
+    hsla(var(--theater-primary), 0.15) 0%, 
+    hsla(var(--theater-secondary), 0.2) 50%, 
+    hsla(var(--background), 0.8) 100%
+  );
+}
+
+/* Accessibility utilities */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  
+  a {
+    text-decoration: none !important;
+    color: black !important;
+  }
+}

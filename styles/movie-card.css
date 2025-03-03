@@ -1,0 +1,136 @@
+/* Movie Card Styles */
+
+/* Base card styles */
+.movie-card {
+  @apply overflow-hidden h-full transition-all duration-300;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.movie-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+/* Poster container */
+.movie-poster-container {
+  position: relative;
+  width: 100%;
+  padding-top: 60%; /* 60% height on mobile */
+}
+
+@media (min-width: 768px) {
+  .movie-poster-container {
+    padding-top: 70%; /* 70% height on desktop */
+  }
+}
+
+/* Poster image */
+.movie-poster {
+  @apply object-cover transition-all duration-500;
+}
+
+.movie-poster.loaded {
+  @apply opacity-100;
+}
+
+.movie-poster.loading {
+  @apply opacity-0;
+}
+
+.movie-card:hover .movie-poster.loaded {
+  transform: scale(1.05);
+}
+
+/* Loading placeholder */
+.poster-placeholder {
+  @apply absolute inset-0 bg-muted flex items-center justify-center transition-opacity duration-500;
+}
+
+.poster-placeholder.hidden {
+  @apply opacity-0;
+}
+
+/* Rating badge */
+.rating-badge {
+  @apply absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-medium flex items-center shadow-sm;
+}
+
+/* Movie title */
+.movie-title {
+  @apply text-lg md:text-xl font-bold mb-1 line-clamp-1 transition-colors;
+}
+
+.movie-card:hover .movie-title {
+  @apply text-primary;
+}
+
+/* Hebrew title */
+.movie-hebrew-title {
+  @apply text-sm text-muted-foreground mb-2 line-clamp-1;
+}
+
+/* Genre badges */
+.genre-badge {
+  @apply text-xs;
+}
+
+/* Movie details */
+.movie-details {
+  @apply flex items-center text-sm text-muted-foreground mb-4;
+}
+
+[dir="rtl"] .movie-details {
+  @apply flex-row-reverse;
+}
+
+/* Showtimes section */
+.showtimes-heading {
+  @apply text-sm font-medium mb-2;
+}
+
+/* Book now button */
+.book-now-button {
+  @apply w-full h-11 mt-2 shadow-sm transition-all duration-200;
+}
+
+.book-now-button:hover {
+  @apply shadow-md;
+}
+
+/* Accessibility improvements */
+.movie-card:focus-within {
+  @apply ring-2 ring-primary ring-offset-2;
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  .movie-card {
+    @apply border-2 border-foreground;
+  }
+  
+  .rating-badge {
+    @apply bg-background text-foreground;
+  }
+  
+  .genre-badge {
+    @apply border-2 border-foreground;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .movie-card,
+  .movie-poster,
+  .poster-placeholder,
+  .book-now-button {
+    transition: none !important;
+  }
+  
+  .movie-card:hover .movie-poster.loaded {
+    transform: none;
+  }
+  
+  .movie-card:hover {
+    transform: none;
+  }
+}

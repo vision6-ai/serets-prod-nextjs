@@ -1,0 +1,122 @@
+/* RTL Support Styles */
+
+/* Base RTL adjustments */
+[dir="rtl"] {
+  /* Reverse margins and paddings for RTL */
+  --margin-start: var(--margin-right);
+  --margin-end: var(--margin-left);
+  --padding-start: var(--padding-right);
+  --padding-end: var(--padding-left);
+}
+
+/* Flip icons in RTL mode */
+[dir="rtl"] .rtl-mirror {
+  transform: scaleX(-1);
+}
+
+/* Adjust text alignment in RTL */
+[dir="rtl"] .text-start {
+  text-align: right;
+}
+
+[dir="rtl"] .text-end {
+  text-align: left;
+}
+
+/* Adjust flexbox direction in RTL */
+[dir="rtl"] .flex-row {
+  flex-direction: row-reverse;
+}
+
+/* Adjust grid columns in RTL */
+[dir="rtl"] .rtl-grid {
+  direction: rtl;
+}
+
+/* Adjust border radius for RTL */
+[dir="rtl"] .rtl-rounded-r {
+  border-radius: 0.375rem 0 0 0.375rem;
+}
+
+[dir="rtl"] .rtl-rounded-l {
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+/* Adjust positioning for RTL */
+[dir="rtl"] .rtl-left {
+  left: auto;
+  right: 0;
+}
+
+[dir="rtl"] .rtl-right {
+  right: auto;
+  left: 0;
+}
+
+/* Adjust margins for RTL */
+[dir="rtl"] .rtl-mr {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
+[dir="rtl"] .rtl-ml {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+/* Adjust padding for RTL */
+[dir="rtl"] .rtl-pr {
+  padding-right: 0;
+  padding-left: 0.5rem;
+}
+
+[dir="rtl"] .rtl-pl {
+  padding-left: 0;
+  padding-right: 0.5rem;
+}
+
+/* Adjust icon placement in inputs */
+[dir="rtl"] .rtl-icon-input .icon-left {
+  left: auto;
+  right: 0.75rem;
+}
+
+[dir="rtl"] .rtl-icon-input input {
+  padding-left: 0.75rem;
+  padding-right: 2.5rem;
+}
+
+/* Adjust dropdown positioning */
+[dir="rtl"] .rtl-dropdown {
+  transform-origin: top right;
+}
+
+/* Adjust button icon placement */
+[dir="rtl"] .button-icon-right {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+[dir="rtl"] .button-icon-left {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
+/* Adjust shadows for RTL */
+[dir="rtl"] .rtl-shadow {
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Adjust animations for RTL */
+@keyframes rtl-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+[dir="rtl"] .rtl-animate-slide {
+  animation: rtl-slide-in 0.3s ease-out;
+}

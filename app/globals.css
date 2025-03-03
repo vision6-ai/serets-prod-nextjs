@@ -1,0 +1,291 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 3.9%;
+  --primary: 0 0% 9%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 0 0% 96.1%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96.1%;
+  --muted-foreground: 0 0% 45.1%;
+  --accent: 0 0% 96.1%;
+  --accent-foreground: 0 0% 9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 89.8%;
+  --input: 0 0% 89.8%;
+  --ring: 0 0% 3.9%;
+  --radius: 0.5rem;
+  
+  /* Theater-specific colors */
+  --theater-primary: 215 100% 50%;
+  --theater-secondary: 215 100% 60%;
+  --theater-accent: 215 100% 70%;
+  
+  /* Logical properties for RTL support */
+  --margin-start: 0;
+  --margin-end: 0;
+  --padding-start: 0;
+  --padding-end: 0;
+  
+  /* Theme transition settings */
+  --theme-duration: 200ms;
+  --theme-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  --theme-properties: background-color, border-color, color, fill, stroke;
+}
+
+.dark {
+  --background: 0 0% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 9%;
+  --secondary: 0 0% 14.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 14.9%;
+  --muted-foreground: 0 0% 63.9%;
+  --accent: 0 0% 14.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 14.9%;
+  --input: 0 0% 14.9%;
+  --ring: 0 0% 83.1%;
+  
+  /* Theater-specific dark mode colors */
+  --theater-primary: 215 80% 60%;
+  --theater-secondary: 215 70% 50%;
+  --theater-accent: 215 60% 40%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  
+  /* RTL support for inputs with icons */
+  [dir="rtl"] input.pl-10 {
+    @apply pl-3 pr-10;
+  }
+  
+  /* RTL support for icons in inputs */
+  [dir="rtl"] .absolute.left-3 {
+    @apply left-auto right-3;
+  }
+}
+
+/* Optimized Theme Transitions */
+.theme-transition {
+  transition-property: var(--theme-properties);
+  transition-duration: var(--theme-duration);
+  transition-timing-function: var(--theme-timing);
+}
+
+/* Apply theme transition to specific elements only */
+.theme-transition-bg {
+  transition: background-color var(--theme-duration) var(--theme-timing);
+}
+
+.theme-transition-text {
+  transition: color var(--theme-duration) var(--theme-timing);
+}
+
+.theme-transition-border {
+  transition: border-color var(--theme-duration) var(--theme-timing);
+}
+
+/* Disable transitions when prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --theme-duration: 0ms;
+  }
+}
+
+/* Card Hover Effects */
+.card-hover {
+  @apply transition-all duration-300;
+}
+
+.card-hover:hover {
+  @apply transform -translate-y-1 shadow-lg;
+}
+
+/* Image Hover Effects */
+.image-hover {
+  @apply transition-transform duration-300;
+}
+
+.image-hover:hover {
+  @apply scale-105;
+}
+
+/* Loading States */
+.loading-skeleton {
+  @apply animate-pulse bg-muted rounded;
+}
+
+/* Page Transitions */
+.page-transition-enter {
+  @apply opacity-0;
+}
+
+.page-transition-enter-active {
+  @apply opacity-100 transition-opacity duration-300;
+}
+
+.page-transition-exit {
+  @apply opacity-100;
+}
+
+.page-transition-exit-active {
+  @apply opacity-0 transition-opacity duration-300;
+}
+
+/* Smart Image Loading */
+.image-loading {
+  @apply blur-sm transition-all duration-300;
+}
+
+.image-loaded {
+  @apply blur-0;
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Animation utilities */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animation-delay-200 {
+  animation-delay: 200ms;
+}
+
+.animation-delay-300 {
+  animation-delay: 300ms;
+}
+
+.animation-delay-500 {
+  animation-delay: 500ms;
+}
+
+/* Focus styles for accessibility */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+}
+
+/* Hero section background gradient */
+.hero-gradient {
+  background: linear-gradient(135deg, 
+    rgba(var(--primary), 0.05) 0%, 
+    rgba(var(--primary), 0.1) 50%, 
+    rgba(var(--background), 0.8) 100%
+  );
+}
+
+/* RTL-specific animations */
+@keyframes rtl-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+[dir="rtl"] .rtl-animate-slide {
+  animation: rtl-slide-in 0.3s ease-out;
+}
+
+/* RTL adjustments for common components */
+[dir="rtl"] .rtl-mirror {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .rtl-icon-input .icon-left {
+  left: auto;
+  right: 0.75rem;
+}
+
+[dir="rtl"] .rtl-icon-input input {
+  padding-left: 0.75rem;
+  padding-right: 2.5rem;
+}
+
+/* Theater-specific styles */
+.theater-card {
+  @apply overflow-hidden transition-all duration-300 hover:shadow-md;
+}
+
+.theater-card-image {
+  @apply relative h-48 w-full transition-transform duration-300;
+}
+
+.theater-card:hover .theater-card-image img {
+  @apply scale-105;
+}
+
+.theater-banner {
+  @apply relative w-full overflow-hidden;
+}
+
+.theater-banner-gradient {
+  @apply absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent;
+}
+
+[dir="rtl"] .theater-banner-gradient {
+  @apply bg-gradient-to-l from-black/70 via-black/40 to-transparent;
+}
+
+/* Showtime selector styles */
+.showtime-button {
+  @apply min-w-[70px] transition-all duration-200;
+}
+
+.showtime-button-available {
+  @apply bg-primary/10 hover:bg-primary/20;
+}
+
+.showtime-button-limited {
+  @apply bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300;
+}
+
+.showtime-button-soldout {
+  @apply bg-destructive/20 hover:bg-destructive/30 text-destructive;
+}
+
+/* Accessibility improvements */
+.sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+}
+
+.focus-visible:focus {
+  @apply outline-none ring-2 ring-primary ring-offset-2;
+}

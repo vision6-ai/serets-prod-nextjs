@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "title": "SERETS.CO.IL - מאגר הסרטים הישראלי",
+    "description": "גלה את מיטב הקולנוע הישראלי. עיין בסרטים, שחקנים וביקורות.",
+    "keywords": "סרטים ישראליים,קולנוע ישראלי,סרטים בעברית,שחקנים ישראלים"
+  },
+  "navigation": {
+    "home": "דף הבית",
+    "movies": "סרטים",
+    "actors": "שחקנים",
+    "blog": "בלוג",
+    "shorts": "קצרים",
+    "signIn": "התחברות",
+    "latestReleases": "חדשים",
+    "topRated": "מדורגים גבוה",
+    "categories": "קטגוריות",
+    "theaters": "בתי קולנוע",
+    "shortsDescription": "צפה בטריילרים האחרונים של סרטים ישראליים בפיד אנכי אימרסיבי",
+    "latestreleases": "חדשים",
+    "toprated": "מדורגים גבוה",
+    "awardwinners": "זוכי פרסים",
+    "comingsoon": "בקרוב"
+  },
+  "common": {
+    "loading": "טוען...",
+    "noResults": "לא נמצאו תוצאות",
+    "viewAll": "צפה בהכל",
+    "readMore": "קרא עוד",
+    "pageNotFound": "דף לא נמצא",
+    "pageNotFoundDesc": "הדף שחיפשת אינו קיים או הוסר",
+    "error": "שגיאה",
+    "errorDesc": "אירעה שגיאה בטעינת הדף",
+    "tryAgain": "נסה שוב",
+    "goHome": "חזור לדף הבית",
+    "language": "שפה"
+  },
+  "home": {
+    "hero": {
+      "title": "גלה את הקולנוע הישראלי",
+      "subtitle": "השער שלך לעולם הסרטים, השחקנים והסיפורים הישראליים",
+      "browseMovies": "עיין בסרטים",
+      "meetActors": "הכר את השחקנים"
+    }
+  },
+  "theaters": {
+    "theaters": "בתי קולנוע",
+    "searchTheaters": "חפש בתי קולנוע לפי שם או מיקום...",
+    "noTheatersFound": "לא נמצאו בתי קולנוע התואמים את החיפוש שלך.",
+    "noImageAvailable": "אין תמונה זמינה",
+    "viewTheater": "צפה בבית הקולנוע",
+    "nowShowing": "מציג כעת",
+    "theaterInfo": "מידע על בית הקולנוע",
+    "pastScreenings": "הקרנות קודמות",
+    "format": "פורמט",
+    "allFormats": "כל הפורמטים",
+    "genre": "ז'אנר",
+    "allGenres": "כל הז'אנרים",
+    "resetFilters": "אפס מסננים",
+    "noMoviesFilters": "לא נמצאו סרטים התואמים את המסננים שלך.",
+    "clearFilters": "נקה מסננים",
+    "about": "אודות",
+    "amenities": "שירותים",
+    "viewOnMap": "צפה במפה",
+    "noPastScreenings": "אין הקרנות קודמות זמינות.",
+    "minutes": "דקות",
+    "showtimesFor": "שעות הקרנה עבור",
+    "noShowtimesDate": "אין שעות הקרנה זמינות לתאריך זה",
+    "confirmBooking": "אשר הזמנה",
+    "bookingDescription": "אתה עומד להזמין כרטיסים להקרנה הבאה:",
+    "date": "תאריך",
+    "time": "שעה",
+    "hall": "אולם",
+    "price": "מחיר",
+    "availableSeats": "מושבים פנויים",
+    "of": "מתוך",
+    "cancel": "ביטול",
+    "continueToBooking": "המשך להזמנה",
+    "selectTheater": "בחר בית קולנוע",
+    "learnMore": "למידע נוסף"
+  }
+}

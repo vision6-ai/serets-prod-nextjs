@@ -1,0 +1,72 @@
+/*
+  # Fix videos table and add sample data
+
+  1. Drop and recreate videos table
+    - Ensure clean state by dropping if exists
+    - Create with proper structure and constraints
+    - Add appropriate indexes
+    - Enable RLS with public read access
+
+  2. Sample Data
+    - Add real trailer URLs for existing movies
+*/
+
+-- Drop existing table if it exists
+DROP TABLE IF EXISTS videos;
+
+-- Create videos table
+CREATE TABLE videos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  movie_id uuid REFERENCES movies(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  url text NOT NULL,
+  type text NOT NULL DEFAULT 'trailer',
+  language text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Create indexes
+CREATE INDEX idx_videos_movie_id ON videos(movie_id);
+CREATE INDEX idx_videos_type ON videos(type);
+
+-- Enable RLS
+ALTER TABLE videos ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Allow public read access on videos"
+ON videos FOR SELECT
+TO public
+USING (true);
+
+-- Create trigger for updated_at
+CREATE TRIGGER update_videos_updated_at
+    BEFORE UPDATE ON videos
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Add sample data with real trailer URLs
+INSERT INTO videos (movie_id, title, url, type, language)
+SELECT 
+  m.id,
+  CASE 
+    WHEN m.slug = 'waltz-with-bashir' THEN 'Waltz with Bashir - Official Trailer'
+    WHEN m.slug = 'big-bad-wolves' THEN 'Big Bad Wolves - Official Trailer'
+    WHEN m.slug = 'footnote' THEN 'Footnote - Official Trailer'
+    WHEN m.slug = 'image-of-victory' THEN 'Image of Victory - Official Trailer'
+    WHEN m.slug = 'here-we-are' THEN 'Here We Are - Official Trailer'
+    WHEN m.slug = 'cinema-sabaya' THEN 'Cinema Sabaya - Official Trailer'
+    ELSE 'Official Trailer'
+  END,
+  CASE 
+    WHEN m.slug = 'waltz-with-bashir' THEN 'https://www.youtube.com/embed/ylzO9vbEpPg'
+    WHEN m.slug = 'big-bad-wolves' THEN 'https://www.youtube.com/embed/GsfzhiW5l8c'
+    WHEN m.slug = 'footnote' THEN 'https://www.youtube.com/embed/Vy9LKLzzXZc'
+    WHEN m.slug = 'image-of-victory' THEN 'https://www.youtube.com/embed/Y9X2HvPUqRY'
+    WHEN m.slug = 'here-we-are' THEN 'https://www.youtube.com/embed/KNXxrGJVqDc'
+    WHEN m.slug = 'cinema-sabaya' THEN 'https://www.youtube.com/embed/8EuV7cFJ_BE'
+    ELSE 'https://www.youtube.com/embed/dQw4w9WgXcQ'
+  END,
+  'trailer',
+  'Hebrew'
+FROM movies m;
