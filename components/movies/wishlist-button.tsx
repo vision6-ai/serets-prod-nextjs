@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AuthDialog } from '@/components/auth/auth-dialog'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 
 interface WishlistButtonProps {
@@ -30,6 +30,7 @@ export function WishlistButton({
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
     async function checkWishlist() {
@@ -55,7 +56,7 @@ export function WishlistButton({
     }
 
     checkWishlist()
-  }, [movieId, userId])
+  }, [movieId, userId, supabase])
 
   const handleClick = async () => {
     if (!userId) {

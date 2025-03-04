@@ -4,13 +4,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from '@/app/i18n'
 import { useLocale, useTranslations } from 'next-intl'
 import Image from 'next/image'
-import { Menu, Film } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Film, User } from 'lucide-react'
 import { ModeToggle } from '@/components/mode-toggle'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { Search } from '@/components/search'
 import { SearchDialog } from '@/components/search-dialog'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { UserProfileMenu } from '@/components/user-profile-menu'
+import { MobileMenu } from '@/components/mobile-menu'
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -23,7 +23,6 @@ import {
 import { cn } from '@/lib/utils'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import useSWR from 'swr'
-import { memo } from 'react'
 
 // Types
 interface Genre {
@@ -65,126 +64,6 @@ const topMovies = [
   { title: 'Award Winners', href: '/movies/award-winners' },
   { title: 'Coming Soon', href: '/movies/coming-soon' }
 ]
-
-// Memoized components
-interface MobileMenuProps {
-  isOpen: boolean
-  setIsOpen: (open: boolean) => void
-  categories: Genre[]
-  theaters: Theater[]
-  t: any
-  locale: string
-  isRtl: boolean
-}
-
-const MobileMenu = memo(function MobileMenu({ 
-  isOpen, 
-  setIsOpen, 
-  categories, 
-  theaters, 
-  t, 
-  locale, 
-  isRtl 
-}: MobileMenuProps) {
-  return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu className="h-6 w-6" />
-          <span className="sr-only">Toggle menu</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-        <nav className="flex flex-col gap-4">
-          <div className="px-2 py-4 border-b">
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/auth" onClick={() => setIsOpen(false)}>
-                {t('signIn')}
-              </Link>
-            </Button>
-            <div className="mt-4 flex justify-center">
-              <LanguageSwitcher />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Link
-              href="/shorts"
-              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-accent"
-              onClick={() => setIsOpen(false)}
-            >
-              <Film className="h-4 w-4" />
-              <span>{t('shorts')}</span>
-            </Link>
-
-            <h3 className="px-4 text-sm font-medium text-muted-foreground">{t('categories')}</h3>
-            {categories.map((category) => (
-              <Link
-                key={category.slug}
-                href={`/genres/${category.slug}`}
-                className="block px-4 py-2 text-sm hover:bg-accent"
-                onClick={() => setIsOpen(false)}
-              >
-                {category.name}
-              </Link>
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="px-4 text-sm font-medium text-muted-foreground">Theaters</h3>
-            <Link
-              href="/theaters"
-              className="block px-4 py-2 text-sm hover:bg-accent"
-              onClick={() => setIsOpen(false)}
-            >
-              All Theaters
-            </Link>
-            {theaters.slice(0, 5).map((theater) => (
-              <Link
-                key={theater.slug}
-                href={`/theaters/${theater.slug}`}
-                className="block px-4 py-2 text-sm hover:bg-accent"
-                onClick={() => setIsOpen(false)}
-              >
-                {theater.name}
-              </Link>
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="px-4 text-sm font-medium text-muted-foreground">{t('movies')}</h3>
-            {topMovies.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block px-4 py-2 text-sm hover:bg-accent"
-                onClick={() => setIsOpen(false)}
-              >
-                {t(item.title.toLowerCase().replace(' ', ''))}
-              </Link>
-            ))}
-          </div>
-
-          <Link
-            href="/actors"
-            className="block px-4 py-2 text-sm hover:bg-accent"
-            onClick={() => setIsOpen(false)}
-          >
-            {t('actors')}
-          </Link>
-
-          <Link
-            href="/blog"
-            className="block px-4 py-2 text-sm hover:bg-accent"
-            onClick={() => setIsOpen(false)}
-          >
-            {t('blog')}
-          </Link>
-        </nav>
-      </SheetContent>
-    </Sheet>
-  )
-})
 
 // Main Header component
 export default function Header() {
@@ -332,7 +211,7 @@ export default function Header() {
         </NavigationMenuLink>
       </NavigationMenuItem>
     </NavigationMenuList>
-  ), [categories, theaters, t])
+  ), [categories, theaters, t, locale])
 
   if (!mounted) {
     return null
@@ -377,9 +256,7 @@ export default function Header() {
           <SearchDialog />
           <LanguageSwitcher />
           <ModeToggle />
-          <Button asChild variant="outline" className="hidden md:inline-flex">
-            <Link href="/auth">{t('signIn')}</Link>
-          </Button>
+          <UserProfileMenu />
           
           <MobileMenu 
             isOpen={isOpen}

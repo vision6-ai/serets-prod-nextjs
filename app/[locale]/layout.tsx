@@ -1,12 +1,14 @@
+import { NextIntlClientProvider } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { locales } from '@/config/i18n';
 import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
-import { Providers } from './providers';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import { PageTransition } from '@/components/page-transition';
+import { Toaster } from '@/components/ui/use-toast';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -57,21 +59,37 @@ export default async function LocaleLayout({
   if (!locales.includes(locale as any)) notFound();
   unstable_setRequestLocale(locale);
 
-  // Get messages for the current locale
-  const messages = (await import(`../../messages/${locale}.json`)).default;
+  let messages;
+  try {
+    messages = (await import(`../../messages/${locale}.json`)).default;
+  } catch (error) {
+    notFound();
+  }
+
+  // Use the Providers component to wrap the children
+  const Providers = ({ children, locale, messages }: { children: React.ReactNode, locale: string, messages: any }) => {
+    return (
+      <NextIntlClientProvider locale={locale} messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    );
+  };
 
   return (
     <html lang={locale} dir={locale === 'he' ? 'rtl' : 'ltr'} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Providers locale={locale} messages={messages}>
-          <div className="relative flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">
-              <PageTransition>{children}</PageTransition>
-            </main>
-            <Footer />
-          </div>
-        </Providers>
+        <ThemeProvider>
+          <Providers locale={locale} messages={messages}>
+            <div className="relative flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1">
+                <PageTransition>{children}</PageTransition>
+              </main>
+              <Footer />
+              <Toaster />
+            </div>
+          </Providers>
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>

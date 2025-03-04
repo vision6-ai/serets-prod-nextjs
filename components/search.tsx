@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 
 interface SearchResult {
   id: string
@@ -30,6 +30,7 @@ export function Search() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const supabase = createClient()
 
   const handleSearch = async (value: string) => {
     if (!value.trim()) {

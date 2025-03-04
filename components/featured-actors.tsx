@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 
 interface Actor {
   id: string
@@ -17,6 +17,7 @@ interface Actor {
 export function FeaturedActors() {
   const [actors, setActors] = useState<Actor[]>([])
   const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
     async function fetchActors() {
@@ -37,7 +38,7 @@ export function FeaturedActors() {
     }
 
     fetchActors()
-  }, [])
+  }, [supabase])
 
   return (
     <section className="py-12">

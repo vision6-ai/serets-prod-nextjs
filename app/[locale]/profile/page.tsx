@@ -6,13 +6,17 @@ import { ProfileSkeleton } from '@/components/skeletons'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  params: { locale }
+}: {
+  params: { locale: string }
+}) {
   const supabase = createServerClient()
   
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect('/auth')
+    redirect(`/${locale}/auth`)
   }
 
   return (

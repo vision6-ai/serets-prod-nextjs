@@ -36,22 +36,17 @@ export function ActorSkeleton() {
 
 export function ProfileSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto animate-pulse">
-      <div className="text-center mb-8">
-        <div className="w-32 h-32 rounded-full bg-muted mx-auto mb-4" />
-        <div className="h-8 bg-muted rounded w-48 mx-auto mb-2" />
-        <div className="h-4 bg-muted rounded w-64 mx-auto" />
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <div className="h-10 w-40 bg-primary/10 rounded-md animate-pulse"></div>
+        <div className="h-10 w-32 bg-primary/10 rounded-md animate-pulse"></div>
       </div>
-      <div className="space-y-4">
-        <div className="h-10 bg-muted rounded w-full" />
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4 bg-muted rounded-lg">
-              <div className="h-6 bg-muted-foreground/20 rounded w-3/4 mb-2" />
-              <div className="h-4 bg-muted-foreground/20 rounded w-1/2" />
-            </div>
-          ))}
-        </div>
+      
+      <div className="h-12 w-full bg-primary/10 rounded-md animate-pulse"></div>
+      
+      <div className="space-y-6">
+        <div className="h-64 w-full bg-primary/10 rounded-md animate-pulse"></div>
+        <div className="h-64 w-full bg-primary/10 rounded-md animate-pulse"></div>
       </div>
     </div>
   )
