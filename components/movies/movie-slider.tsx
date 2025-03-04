@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { Link } from 'app/i18n'
+import { Locale } from '@/config/i18n'
 import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { WishlistButton } from './wishlist-button'
@@ -28,9 +29,10 @@ interface MovieSliderProps {
   movies: Movie[]
   loading?: boolean
   viewAllHref?: string
+  locale: Locale
 }
 
-export function MovieSlider({ title, movies, loading, viewAllHref }: MovieSliderProps) {
+export function MovieSlider({ title, movies, loading, viewAllHref, locale }: MovieSliderProps) {
   const [loadedImages, setLoadedImages] = useState<{ [key: string]: boolean }>({})
 
   const handleImageLoad = (movieId: string) => {
@@ -71,6 +73,7 @@ export function MovieSlider({ title, movies, loading, viewAllHref }: MovieSlider
           {viewAllHref && (
             <Link
               href={viewAllHref}
+              locale={locale}
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               View All
@@ -90,7 +93,7 @@ export function MovieSlider({ title, movies, loading, viewAllHref }: MovieSlider
                 <Card className="group overflow-hidden">
                   <CardContent className="p-0">
                     <div className="relative">
-                      <Link href={`/movies/${movie.slug}`} className="block">
+                    <Link href={`/movies/${movie.slug}`} locale={locale} className="block">
                         <div className="aspect-[2/3] relative overflow-hidden bg-muted">
                           {movie.poster_url ? (
                             <>
@@ -127,7 +130,7 @@ export function MovieSlider({ title, movies, loading, viewAllHref }: MovieSlider
                       </div>
                     </div>
                     <div className="p-4">
-                      <Link href={`/movies/${movie.slug}`} className="block group-hover:text-primary transition-colors">
+                      <Link href={`/movies/${movie.slug}`} locale={locale} className="block group-hover:text-primary transition-colors">
                         <h3 className="font-semibold mb-1 line-clamp-1">{movie.title}</h3>
                         <p className="text-sm text-muted-foreground">
                           {movie.release_date ? new Date(movie.release_date).getFullYear() : 'TBA'}

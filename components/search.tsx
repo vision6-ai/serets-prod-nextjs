@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { createClient } from '@/lib/supabase'
+import { createClient, supabase } from '@/lib/supabase'
 
 interface SearchResult {
   id: string

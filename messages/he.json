@@ -139,5 +139,9 @@
     "noReviewContent": "אין תוכן ביקורת",
     "viewMovie": "צפה בסרט",
     "helpfulVotes": "הצבעות מועילות"
+  },
+  "movies": {
+    "title": "סרטים",
+    "description": "עיין באוסף הסרטים הישראליים שלנו"
   }
 }

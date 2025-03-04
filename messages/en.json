@@ -139,5 +139,9 @@
     "noReviewContent": "No review content",
     "viewMovie": "View Movie",
     "helpfulVotes": "helpful votes"
+  },
+  "movies": {
+    "title": "Movies",
+    "description": "Browse our collection of Israeli movies"
   }
 }

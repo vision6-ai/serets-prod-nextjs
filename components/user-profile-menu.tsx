@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { Link } from '@/app/i18n'
+import { Link } from 'app/i18n'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase'
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
+import { Button } from './ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,8 +16,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { useToast } from '@/components/ui/use-toast'
+} from './ui/dropdown-menu'
+import { useToast } from './ui/use-toast'
 import { User as UserIcon, Settings, LogOut } from 'lucide-react'
 
 export function UserProfileMenu() {
@@ -27,7 +27,6 @@ export function UserProfileMenu() {
   const t = useTranslations('Profile')
   const router = useRouter()
   const { toast } = useToast()
-  const supabase = createClient()
 
   useEffect(() => {
     async function getUser() {
@@ -43,7 +42,7 @@ export function UserProfileMenu() {
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase])
+  }, [])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -124,4 +123,4 @@ export function UserProfileMenu() {
       </DropdownMenuContent>
     </DropdownMenu>
   )
-} 
+}

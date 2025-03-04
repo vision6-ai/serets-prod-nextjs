@@ -179,7 +179,7 @@ export function MovieContent({ movie, videos, cast, genres, awards, similarMovie
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {safeGenres.map((genre) => (
-                        <Link key={genre.id} href={`/genres/${genre.slug}`} locale={locale}>
+                        <Link key={genre.id} href={`/${locale}/genres/${genre.slug}`}>
                           <Badge variant="secondary">
                             {genre.name}
                           </Badge>
@@ -265,7 +265,7 @@ export function MovieContent({ movie, videos, cast, genres, awards, similarMovie
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {safeCast.map((actor) => (
                     <Card key={actor.id} className="hover-card h-full">
-                      <Link href={`/actors/${actor.slug}`} locale={locale}>
+                      <Link href={`/${locale}/actors/${actor.slug}`}>
                         <CardContent className="p-4 flex flex-col items-center">
                           <div className="w-full aspect-square mb-4">
                             {actor.photo_url ? (
@@ -331,7 +331,7 @@ export function MovieContent({ movie, videos, cast, genres, awards, similarMovie
                 <h2 className="text-2xl font-semibold mb-6">Similar Movies</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {safeSimilarMovies.map((similarMovie) => (
-                    <Link key={similarMovie.id} href={`/movies/${similarMovie.slug}`} locale={locale}>
+                    <Link key={similarMovie.id} href={`/${locale}/movies/${similarMovie.slug}`}>
                       <Card className="hover-card">
                         <CardContent className="p-4">
                           {similarMovie.poster_url ? (

@@ -13,21 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/use-toast'
 
-// Types
-interface Genre {
-  id: string
-  name: string
-  hebrew_name: string | null
-  photo_url: string | null
-  slug: string
-}
-
-interface Theater {
-  id: string
-  name: string
-  location: string
-  slug: string
-}
+import { Genre, Theater } from '@/types/shared'
 
 interface MobileMenuProps {
   isOpen: boolean

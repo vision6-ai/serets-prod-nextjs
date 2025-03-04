@@ -1,16 +1,16 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Link } from '@/app/i18n'
+import { Link } from 'app/i18n'
 import { useLocale, useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { Film, User } from 'lucide-react'
-import { ModeToggle } from '@/components/mode-toggle'
-import { LanguageSwitcher } from '@/components/language-switcher'
-import { Search } from '@/components/search'
-import { SearchDialog } from '@/components/search-dialog'
-import { UserProfileMenu } from '@/components/user-profile-menu'
-import { MobileMenu } from '@/components/mobile-menu'
+import { ModeToggle } from './mode-toggle'
+import { LanguageSwitcher } from './language-switcher'
+import { Search } from './search'
+import { SearchDialog } from './search-dialog'
+import { UserProfileMenu } from './user-profile-menu'
+import { MobileMenu } from './mobile-menu'
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -19,44 +19,54 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
-} from '@/components/ui/navigation-menu'
+} from './ui/navigation-menu'
 import { cn } from '@/lib/utils'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import useSWR from 'swr'
 
-// Types
-interface Genre {
-  id: string
-  name: string
-  hebrew_name: string | null
-  photo_url: string | null
-  slug: string
-}
-
-interface Theater {
-  id: string
-  name: string
-  location: string
-  slug: string
-}
+import { Genre, Theater } from '@/types/shared'
 
 // Fetch functions
 const fetchCategories = async () => {
-  const supabase = createClientComponentClient()
-  const { data } = await supabase
-    .from('genres')
-    .select('id, name, slug, hebrew_name, photo_url')
-    .order('name')
-  return data || []
+  try {
+    const client = createClientComponentClient()
+    const { data, error } = await client
+      .from('genres')
+      .select('id, name, slug, hebrew_name')
+      .order('name')
+    
+    if (error) {
+      console.error('Error fetching categories:', error.message)
+      return []
+    }
+    
+    console.log('Fetched categories:', data)
+    return data || []
+  } catch (error) {
+    console.error('Exception fetching categories:', error)
+    return []
+  }
 }
 
 const fetchTheaters = async () => {
-  const supabase = createClientComponentClient()
-  const { data } = await supabase
-    .from('theaters')
-    .select('id, name, location, slug')
-    .order('name')
-  return data || []
+  try {
+    const client = createClientComponentClient()
+    const { data, error } = await client
+      .from('theaters')
+      .select('id, name, location, slug')
+      .order('name')
+    
+    if (error) {
+      console.error('Error fetching theaters:', error.message)
+      return []
+    }
+    
+    console.log('Fetched theaters:', data)
+    return data || []
+  } catch (error) {
+    console.error('Exception fetching theaters:', error)
+    return []
+  }
 }
 
 // Top movies data - static to avoid unnecessary fetches
@@ -77,7 +87,13 @@ export default function Header() {
   const isRtl = locale === 'he'
 
   // Fetch data with SWR
-  const { data: categories = [] } = useSWR<Genre[]>('categories', fetchCategories)
+  const { data: categories = [], error: categoriesError } = useSWR<Genre[]>('categories', fetchCategories)
+  
+  useEffect(() => {
+    if (categoriesError) {
+      console.error('SWR categories error:', categoriesError)
+    }
+  }, [categoriesError])
   const { data: theaters = [] } = useSWR<Theater[]>('theaters', fetchTheaters)
 
   useEffect(() => {

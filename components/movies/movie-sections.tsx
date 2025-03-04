@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { Locale } from '@/config/i18n'
 import { MovieSlider } from './movie-slider'
 import { Suspense } from 'react'
 
@@ -95,7 +96,7 @@ async function getMoviesData() {
   }
 }
 
-export async function MovieSections() {
+export async function MovieSections({ locale }: { locale: Locale }) {
   const { latest, topRated, genreMovies } = await getMoviesData()
 
   return (
@@ -105,6 +106,7 @@ export async function MovieSections() {
         movies={latest}
         loading={false}
         viewAllHref="/movies/latest"
+        locale={locale}
       />
       
       <MovieSlider
@@ -112,6 +114,7 @@ export async function MovieSections() {
         movies={topRated}
         loading={false}
         viewAllHref="/movies/top-rated"
+        locale={locale}
       />
       
       {/* Genre-based movie sliders */}
@@ -122,6 +125,7 @@ export async function MovieSections() {
           movies={movies}
           loading={false}
           viewAllHref={`/genres/${slug}`}
+          locale={locale}
         />
       ))}
     </Suspense>

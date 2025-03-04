@@ -1,5 +1,6 @@
 import {Suspense} from 'react';
 import {useTranslations} from 'next-intl';
+import {Locale} from '@/config/i18n';
 import {Button} from '@/components/ui/button';
 import {Link} from '@/app/i18n';
 import {MovieSections} from '@/components/movies/movie-sections';
@@ -8,7 +9,7 @@ import {MovieSkeleton, ActorSkeleton} from '@/components/skeletons';
 import {unstable_setRequestLocale} from 'next-intl/server';
 import { HeroSection } from '@/components/hero-section';
 
-export default function HomePage({params: {locale}}: {params: {locale: string}}) {
+export default function HomePage({params: {locale}}: {params: {locale: Locale}}) {
   unstable_setRequestLocale(locale);
   const t = useTranslations('home');
 
@@ -19,7 +20,7 @@ export default function HomePage({params: {locale}}: {params: {locale: string}})
 
       {/* Featured Movies Section */}
       <Suspense fallback={<MovieSkeleton />}>
-        <MovieSections />
+        <MovieSections locale={locale} />
       </Suspense>
 
       {/* Featured Actors Section */}
