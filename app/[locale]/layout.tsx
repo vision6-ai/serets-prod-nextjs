@@ -2,13 +2,14 @@ import { NextIntlClientProvider } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import { locales } from '@/config/i18n';
+import { locales } from 'config/i18n';
 import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
-import Header from '@/components/header';
-import Footer from '@/components/footer';
-import { PageTransition } from '@/components/page-transition';
-import { Toaster } from '@/components/ui/use-toast';
-import { ThemeProvider } from '@/components/theme-provider';
+import Header from 'components/header';
+import Footer from 'components/footer';
+import { PageTransition } from 'components/page-transition';
+import { ThemeProvider } from 'components/theme-provider';
+import { AuthProvider } from '@/components/auth/auth-provider';
+import { Toaster } from 'sonner';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -70,7 +71,9 @@ export default async function LocaleLayout({
   const Providers = ({ children, locale, messages }: { children: React.ReactNode, locale: string, messages: any }) => {
     return (
       <NextIntlClientProvider locale={locale} messages={messages}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </NextIntlClientProvider>
     );
   };
@@ -86,9 +89,9 @@ export default async function LocaleLayout({
                 <PageTransition>{children}</PageTransition>
               </main>
               <Footer />
-              <Toaster />
             </div>
           </Providers>
+          <Toaster />
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

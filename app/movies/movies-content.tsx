@@ -2,19 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { MovieList } from '@/components/movies/movie-list'
-import { MovieFilters } from '@/components/movies/movie-filters'
+import { MovieList } from 'components/movies/movie-list'
+import { MovieFilters } from 'components/movies/movie-filters'
 import { createBrowserClient } from '@supabase/ssr'
-
-interface Movie {
-  id: string
-  title: string
-  hebrew_title: string | null
-  release_date: string | null
-  poster_url: string | null
-  rating: number | null
-  slug: string
-}
+import { useLocale } from 'next-intl'
+import type { Movie } from '@/types/movie'
 
 interface Filters {
   genres: Array<string>
@@ -28,6 +20,7 @@ export function MoviesContent() {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
+  const locale = useLocale()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -104,7 +97,12 @@ export function MoviesContent() {
       
       // Only update if these are still the current filters
       if (JSON.stringify(filters) === JSON.stringify(currentFilters.current)) {
-        setMovies(data || [])
+        // Ensure all movies have required fields
+        const validMovies = (data || []).map(movie => ({
+          ...movie,
+          poster_url: movie.poster_url || '/placeholder-poster.jpg' // Provide a fallback for poster_url
+        })) as Movie[]
+        setMovies(validMovies)
       }
     } catch (error) {
       console.error('Error fetching movies:', error)
@@ -144,7 +142,7 @@ export function MoviesContent() {
         ) : (
           <>
             {movies.length > 0 ? (
-              <MovieList movies={movies} />
+              <MovieList movies={movies} locale={locale} />
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">

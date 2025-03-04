@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "SERETS.CO.IL - Israeli Movie Database",
-    "description": "Discover the best of Israeli cinema. Browse movies, actors, and reviews.",
+    "description": "Discover the best of Israeli cinema. Browse movies and actors.",
     "keywords": "Israeli movies,Israeli cinema,Hebrew movies,Israeli actors"
   },
   "navigation": {
@@ -80,7 +80,7 @@
   },
   "Auth": {
     "joinCommunity": "Join Our Community!",
-    "authDescription": "Create your personalized movie experience! Save favorites to your wishlist, share your thoughts with reviews, and join our vibrant community of Israeli cinema enthusiasts.",
+    "authDescription": "Create your personalized movie experience and join our vibrant community of Israeli cinema enthusiasts.",
     "signIn": "Sign In",
     "createAccount": "Create Account",
     "welcomeTitle": "Welcome to Israeli Cinema Hub",
@@ -104,8 +104,6 @@
     "myProfile": "My Profile",
     "signOut": "Sign Out",
     "profile": "Profile",
-    "wishlist": "Wishlist",
-    "reviews": "Reviews",
     "profileInformation": "Profile Information",
     "manageProfileInfo": "Manage your personal information and preferences",
     "displayName": "Display Name",
@@ -123,22 +121,7 @@
     "profileUpdated": "Profile Updated",
     "profileUpdateSuccess": "Your profile has been successfully updated.",
     "updateError": "Update Error",
-    "profileUpdateFailed": "Failed to update your profile. Please try again.",
-    "myWishlist": "My Wishlist",
-    "wishlistDescription": "Movies you've saved to watch later",
-    "noWishlistItems": "Your wishlist is empty",
-    "wishlistEmpty": "Save movies to your wishlist to keep track of what you want to watch.",
-    "browseMovies": "Browse Movies",
-    "noPoster": "No poster",
-    "unknown": "Unknown",
-    "viewDetails": "View Details",
-    "myReviews": "My Reviews",
-    "reviewsDescription": "Your movie reviews and ratings",
-    "noReviews": "You haven't written any reviews yet",
-    "reviewsEmpty": "Share your thoughts on movies you've watched by writing reviews.",
-    "noReviewContent": "No review content",
-    "viewMovie": "View Movie",
-    "helpfulVotes": "helpful votes"
+    "profileUpdateFailed": "Failed to update your profile. Please try again."
   },
   "movies": {
     "title": "Movies",

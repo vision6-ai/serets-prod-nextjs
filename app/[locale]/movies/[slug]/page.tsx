@@ -1,4 +1,4 @@
-import { MovieContent } from '@/components/movies/movie-content'
+import { MovieContent } from 'components/movies/movie-content'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 

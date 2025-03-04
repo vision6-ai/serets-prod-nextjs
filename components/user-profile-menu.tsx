@@ -5,7 +5,7 @@ import { User } from '@supabase/supabase-js'
 import { Link } from 'app/i18n'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase } from 'lib/supabase'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { Button } from './ui/button'
 import {
@@ -17,8 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
-import { useToast } from './ui/use-toast'
-import { User as UserIcon, Settings, LogOut } from 'lucide-react'
+import { useToast } from 'hooks/use-toast'
+import { User as UserIcon, LogOut } from 'lucide-react'
 
 export function UserProfileMenu() {
   const [user, setUser] = useState<User | null>(null)
@@ -100,18 +100,6 @@ export function UserProfileMenu() {
             <Link href="/profile">
               <UserIcon className="mr-2 h-4 w-4" />
               <span>{t('profile')}</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/profile?tab=wishlist">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>{t('wishlist')}</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/profile?tab=reviews">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>{t('reviews')}</span>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
