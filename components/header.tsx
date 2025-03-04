@@ -28,6 +28,8 @@ import useSWR from 'swr'
 interface Genre {
   id: string
   name: string
+  hebrew_name: string | null
+  photo_url: string | null
   slug: string
 }
 
@@ -43,7 +45,7 @@ const fetchCategories = async () => {
   const supabase = createClientComponentClient()
   const { data } = await supabase
     .from('genres')
-    .select('id, name, slug')
+    .select('id, name, slug, hebrew_name, photo_url')
     .order('name')
   return data || []
 }
