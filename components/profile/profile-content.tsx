@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useToast } from '@/components/ui/use-toast'
+import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase'
 import { User as LucideUser, LogOut, Star, Clock, ThumbsUp, Save } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
@@ -142,7 +142,13 @@ export function ProfileContent({ userId }: { userId: string }) {
             .order('created_at', { ascending: false })
             
           if (wishlistData) {
-            setWishlist(wishlistData as WishlistMovie[])
+            // Transform the data to match the WishlistMovie type
+            // Supabase returns movie as an array when using nested select
+            const transformedWishlist = wishlistData.map(item => ({
+              ...item,
+              movie: Array.isArray(item.movie) && item.movie.length > 0 ? item.movie[0] : item.movie
+            }));
+            setWishlist(transformedWishlist as unknown as WishlistMovie[]);
           }
           
           // Fetch reviews
@@ -166,7 +172,13 @@ export function ProfileContent({ userId }: { userId: string }) {
             .order('created_at', { ascending: false })
             
           if (reviewsData) {
-            setReviews(reviewsData as UserReview[])
+            // Transform the data to match the UserReview type
+            // Supabase returns movie as an array when using nested select
+            const transformedReviews = reviewsData.map(item => ({
+              ...item,
+              movie: Array.isArray(item.movie) && item.movie.length > 0 ? item.movie[0] : item.movie
+            }));
+            setReviews(transformedReviews as unknown as UserReview[]);
           }
         }
       } catch (error) {
