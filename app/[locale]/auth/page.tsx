@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams, useParams } from 'next/navigation'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
@@ -15,7 +15,21 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 
-export default function AuthPage() {
+// Loading fallback for Suspense
+function AuthLoading() {
+  return (
+    <div className="container max-w-lg mx-auto px-4 py-16 flex justify-center items-center">
+      <div className="animate-pulse flex flex-col items-center">
+        <div className="h-12 w-12 bg-primary/20 rounded-full mb-4"></div>
+        <div className="h-6 w-48 bg-primary/20 rounded mb-2"></div>
+        <div className="h-4 w-32 bg-primary/20 rounded"></div>
+      </div>
+    </div>
+  )
+}
+
+// Client component that uses useSearchParams
+function AuthPageClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const params = useParams()
@@ -440,5 +454,14 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<AuthLoading />}>
+      <AuthPageClient />
+    </Suspense>
   )
 } 
