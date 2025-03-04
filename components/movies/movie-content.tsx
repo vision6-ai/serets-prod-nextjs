@@ -1,372 +1,240 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Play, Calendar, Clock, Star, Award, Globe, Tags, Users, ThumbsUp } from 'lucide-react'
-import { Link } from '@/app/i18n'
-import { useLocale } from 'next-intl'
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { WishlistButton } from './wishlist-button'
-import { MovieReviews } from './movie-reviews'
-import { SEO } from '@/components/seo'
-
-interface Movie {
-  id: string
-  title: string
-  hebrew_title: string | null
-  synopsis: string | null
-  release_date: string | null
-  duration: number | null
-  rating: number | null
-  poster_url: string | null
-  slug: string
-}
-
-interface Video {
-  id: string
-  title: string
-  url: string
-  type: string
-  language: string | null
-}
-
-interface Actor {
-  id: string
-  name: string
-  hebrew_name: string | null
-  role: string
-  slug: string
-  photo_url: string | null
-}
-
-interface Genre {
-  id: string
-  name: string
-  hebrew_name: string | null
-  slug: string
-}
-
-interface Award {
-  id: string
-  name: string
-  category: string
-  year: number
-  is_winner: boolean
-}
+import { useAuth } from '@/components/auth/auth-provider'
+import { AuthDialog } from '@/components/auth/auth-dialog'
+import { useToast } from '@/hooks/use-toast'
+import { createClient } from '@/lib/supabase'
 
 interface MovieContentProps {
-  movie: Movie
-  videos: Video[]
-  cast: Actor[]
-  genres: Genre[]
-  awards: Award[]
-  similarMovies: Movie[]
+  movie: {
+    id: string
+    title: string
+    hebrew_title: string
+    synopsis: string
+    release_date: string
+    duration: number
+    rating: number
+    poster_url: string
+    slug: string
+  }
+  videos: any[]
+  cast: Array<{
+    id: string
+    name: string
+    hebrew_name: string | null
+    slug: string
+    photo_url: string | null
+    role: string
+  }>
+  genres: Array<{
+    id: string
+    name: string
+    hebrew_name: string | null
+    slug: string
+  }>
+  awards: Array<{
+    id: string
+    name: string
+    category: string
+    year: number
+    is_winner: boolean
+  }>
+  similarMovies: Array<{
+    id: string
+    title: string
+    hebrew_title: string
+    synopsis: string
+    release_date: string
+    duration: number
+    rating: number
+    poster_url: string
+    slug: string
+  }>
 }
 
-export function MovieContent({ movie, videos, cast, genres, awards, similarMovies }: MovieContentProps) {
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
-  const supabase = createClientComponentClient()
-  const [userId, setUserId] = useState<string | null>(null)
-  const locale = useLocale() as 'en' | 'he'
+export function MovieContent({
+  movie,
+  videos,
+  cast,
+  genres,
+  awards,
+  similarMovies
+}: MovieContentProps) {
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [isInWishlist, setIsInWishlist] = useState(false)
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const supabase = createClient()
 
-  useEffect(() => {
-    async function getUser() {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUserId(session?.user?.id || null)
+  const handleWishlistClick = async () => {
+    if (!user) {
+      setShowAuthDialog(true)
+      return
     }
-    getUser()
-  }, [supabase.auth])
 
-  // Ensure arrays are never null
-  const safeVideos = videos || []
-  const safeCast = cast || []
-  const safeGenres = genres || []
-  const safeAwards = awards || []
-  const safeSimilarMovies = similarMovies || []
+    try {
+      if (isInWishlist) {
+        // Remove from wishlist
+        const { error } = await supabase
+          .from('wishlists')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('movie_id', movie.id)
 
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
+        if (error) throw error
+
+        setIsInWishlist(false)
+        toast({
+          title: 'Success',
+          description: 'Movie removed from wishlist.'
+        })
+      } else {
+        // Add to wishlist
+        const { error } = await supabase
+          .from('wishlists')
+          .insert({
+            user_id: user.id,
+            movie_id: movie.id
+          })
+
+        if (error) throw error
+
+        setIsInWishlist(true)
+        toast({
+          title: 'Success',
+          description: 'Movie added to wishlist.'
+        })
+      }
+    } catch (error) {
+      console.error('Wishlist error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update wishlist.',
+        variant: 'destructive'
+      })
     }
   }
 
-  return (
-    <div className="container relative mx-auto px-4 py-8 z-10">
-      <SEO
-        title={movie.title}
-        description={movie.synopsis || `Watch ${movie.title}, a critically acclaimed Israeli film.`}
-        ogImage={movie.poster_url || undefined}
-      />
+  // Check if movie is in user's wishlist on component mount
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('wishlists')
+        .select()
+        .eq('user_id', user.id)
+        .eq('movie_id', movie.id)
+        .single()
+        .then(({ data }) => {
+          setIsInWishlist(!!data)
+        })
+    }
+  }, [user, movie.id, supabase])
 
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Left Column - Poster and Quick Info */}
-          <div className="w-full md:w-1/3">
-            {movie.poster_url ? (
-              <img
-                src={movie.poster_url}
-                alt={movie.title}
-                className="w-full max-w-sm mx-auto rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-muted"
-                loading="lazy"
-              />
-            ) : (
-              <div className="aspect-[2/3] max-w-sm mx-auto bg-muted rounded-lg flex items-center justify-center text-muted-foreground p-4 text-center">
-                {movie.title}
-              </div>
-            )}
-            
-            <div className="mt-6 space-y-4">
-              {/* Quick Info Cards */}
-              <WishlistButton
-                movieId={movie.id}
-                userId={userId}
-                variant="outline"
-                showText
-                size="default"
-                className="w-full"
-              />
-              <div className="grid grid-cols-2 gap-4">
-                {movie.rating && (
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <Star className="w-5 h-5 mx-auto mb-2" />
-                      <div className="font-bold text-xl">{movie.rating}/10</div>
-                      <div className="text-sm text-muted-foreground">Rating</div>
-                    </CardContent>
-                  </Card>
-                )}
-                {movie.duration && (
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <Clock className="w-5 h-5 mx-auto mb-2" />
-                      <div className="font-bold text-xl">{movie.duration}</div>
-                      <div className="text-sm text-muted-foreground">Minutes</div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-              
-              {/* Release Date */}
-              {movie.release_date && (
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="w-4 h-4" />
-                      <span className="font-semibold">Release Date</span>
-                    </div>
-                    <div className="text-muted-foreground">
-                      {new Date(movie.release_date).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Genres */}
-              {safeGenres.length > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Tags className="w-4 h-4" />
-                      <span className="font-semibold">Genres</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {safeGenres.map((genre) => (
-                        <Link key={genre.id} href={`/${locale}/genres/${genre.slug}`}>
-                          <Badge variant="secondary">
-                            {genre.name}
-                          </Badge>
-                        </Link>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+  return (
+    <>
+      <div className="flex flex-col gap-6">
+        {/* Movie poster */}
+        <img
+          src={movie.poster_url}
+          alt={movie.title}
+          className="w-full max-w-[400px] rounded-lg"
+        />
+
+        {/* Add to Wishlist button */}
+        <button
+          onClick={handleWishlistClick}
+          className="flex items-center justify-center gap-2 w-full max-w-[400px] px-4 py-2 rounded-md border border-border hover:bg-accent"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill={isInWishlist ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+          Add to Wishlist
+        </button>
+
+        {/* Rating and Duration */}
+        <div className="flex gap-4 w-full max-w-[400px]">
+          <div className="flex-1 text-center">
+            <div className="flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+              </svg>
             </div>
+            <div className="font-bold">{movie.rating}/10</div>
+            <div className="text-sm text-muted-foreground">Rating</div>
           </div>
 
-          {/* Right Column - Main Content */}
-          <div className="w-full md:w-2/3">
-            <h1 className="text-5xl font-bold mb-2">{movie.title}</h1>
-            {movie.hebrew_title && (
-              <h2 className="text-2xl text-muted-foreground mb-6">
-                {movie.hebrew_title}
-              </h2>
-            )}
-            
-            {/* Overview Section */}
-            <section id="overview" className="mb-12">
-              <h2 className="text-2xl font-semibold mb-6">Overview</h2>
-              {movie.synopsis && (
-                <div className="mb-8">
-                  <p className="text-lg leading-relaxed">{movie.synopsis}</p>
-                </div>
-              )}
-            </section>
-
-            {/* Videos Section */}
-            {safeVideos.length > 0 && (
-              <section id="videos" className="mb-12">
-                <h2 className="text-2xl font-semibold mb-6">Videos & Trailers</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {safeVideos.map((video) => (
-                    <Card key={video.id} className="hover-card">
-                      <Dialog
-                        open={selectedVideo?.id === video.id}
-                        onOpenChange={(open) => setSelectedVideo(open ? video : null)}
-                      >
-                        <DialogTrigger asChild>
-                          <CardContent className="p-4 cursor-pointer">
-                            <div className="relative aspect-video bg-muted rounded-lg overflow-hidden mb-4">
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <Play className="w-12 h-12 text-white opacity-80 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                                {video.language && (
-                                  <Badge variant="secondary" className="mb-2">
-                                    {video.language}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <h4 className="font-medium mb-2">{video.title}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {video.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </p>
-                          </CardContent>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[900px]">
-                          <div className="aspect-video">
-                            <iframe
-                              src={video.url}
-                              className="w-full h-full rounded-lg"
-                              allowFullScreen
-                            />
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Cast Section */}
-            {safeCast.length > 0 && (
-              <section id="cast" className="mb-12">
-                <h2 className="text-2xl font-semibold mb-6">Cast</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {safeCast.map((actor) => (
-                    <Card key={actor.id} className="hover-card h-full">
-                      <Link href={`/${locale}/actors/${actor.slug}`}>
-                        <CardContent className="p-4 flex flex-col items-center">
-                          <div className="w-full aspect-square mb-4">
-                            {actor.photo_url ? (
-                              <img
-                                src={actor.photo_url}
-                                alt={actor.name}
-                                className="w-full h-full object-cover rounded-full"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">
-                                <span className="text-2xl">
-                                  {actor.name.charAt(0)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <h4 className="font-medium text-center mb-1">
-                            {actor.name}
-                          </h4>
-                          {actor.hebrew_name && (
-                            <p className="text-sm text-muted-foreground text-center mb-1">
-                              {actor.hebrew_name}
-                            </p>
-                          )}
-                          <p className="text-sm text-muted-foreground text-center">
-                            {actor.role}
-                          </p>
-                        </CardContent>
-                      </Link>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Awards Section */}
-            {safeAwards.length > 0 && (
-              <section id="awards" className="mb-12">
-                <h2 className="text-2xl font-semibold mb-6">Awards</h2>
-                <div className="space-y-4">
-                  {safeAwards.map((award) => (
-                    <Card key={award.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-4">
-                          <Award className={`w-6 h-6 ${award.is_winner ? 'text-yellow-500' : 'text-muted-foreground'}`} />
-                          <div>
-                            <h4 className="font-medium">{award.name}</h4>
-                            <p className="text-sm text-muted-foreground">{award.category}</p>
-                            <p className="text-sm text-muted-foreground">{award.year}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Similar Movies Section */}
-            {safeSimilarMovies.length > 0 && (
-              <section id="similar" className="mb-12">
-                <h2 className="text-2xl font-semibold mb-6">Similar Movies</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {safeSimilarMovies.map((similarMovie) => (
-                    <Link key={similarMovie.id} href={`/${locale}/movies/${similarMovie.slug}`}>
-                      <Card className="hover-card">
-                        <CardContent className="p-4">
-                          {similarMovie.poster_url ? (
-                            <img
-                              src={similarMovie.poster_url}
-                              alt={similarMovie.title}
-                              className="aspect-[2/3] object-cover rounded-md mb-4"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="aspect-[2/3] bg-muted rounded-md mb-4 flex items-center justify-center">
-                              {similarMovie.title}
-                            </div>
-                          )}
-                          <h4 className="font-medium mb-1">{similarMovie.title}</h4>
-                          {similarMovie.hebrew_title && (
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {similarMovie.hebrew_title}
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
+          <div className="flex-1 text-center">
+            <div className="flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <div className="font-bold">{movie.duration}</div>
+            <div className="text-sm text-muted-foreground">Minutes</div>
           </div>
         </div>
 
-        {/* Reviews Section */}
-        <section id="reviews" className="mb-12">
-          <MovieReviews movieId={movie.id} userId={userId} />
-        </section>
+        {/* Release Date */}
+        <div className="w-full max-w-[400px]">
+          <div className="flex items-center gap-2 px-4 py-3 rounded-md border border-border">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Release Date
+          </div>
+        </div>
+
+        {/* Title and Overview */}
+        <div className="space-y-4">
+          <h1 className="text-4xl font-bold">{movie.title}</h1>
+          {movie.hebrew_title && (
+            <h2 className="text-2xl text-muted-foreground">{movie.hebrew_title}</h2>
+          )}
+
+          <div>
+            <h3 className="text-2xl font-semibold mb-2">Overview</h3>
+            <p>{movie.synopsis}</p>
+          </div>
+        </div>
+
+        {/* Cast section */}
+        {cast.length > 0 && (
+          <div>
+            <h3 className="text-2xl font-semibold mb-4">Cast</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {cast.map((actor) => (
+                <div key={actor.id} className="text-center">
+                  <img
+                    src={actor.photo_url || ''}
+                    alt={actor.name}
+                    className="w-full aspect-square rounded-full object-cover mb-2"
+                  />
+                  <div className="font-medium">{actor.name}</div>
+                  <div className="text-sm text-muted-foreground">{actor.role}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+
+      <AuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        redirectTo={window?.location?.href}
+      />
+    </>
   )
 }
