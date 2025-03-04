@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { Link } from '../app/i18n'
 
 export function HeroSection() {
   const t = useTranslations('home.hero')
@@ -144,10 +145,10 @@ export function HeroSection() {
             isRtl && "sm:flex-row-reverse"
           )}>
             <Button asChild size="lg" className="min-w-[180px]">
-              <a href="/movies">{t('browseMovies')}</a>
+              <Link href="/movies">{t('browseMovies')}</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="min-w-[180px]">
-              <a href="/actors">{t('meetActors')}</a>
+              <Link href="/actors">{t('meetActors')}</Link>
             </Button>
           </div>
         </div>

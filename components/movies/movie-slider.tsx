@@ -1,6 +1,6 @@
 'use client'
 
-import { Link } from 'app/i18n'
+import { Link } from '@/app/i18n'
 import { Locale } from '@/config/i18n'
 import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
@@ -93,7 +93,7 @@ export function MovieSlider({ title, movies, loading, viewAllHref, locale }: Mov
                 <Card className="group overflow-hidden">
                   <CardContent className="p-0">
                     <div className="relative">
-                    <Link href={`/movies/${movie.slug}`} locale={locale} className="block">
+                      <Link href={`/movies/${movie.slug}`} locale={locale} className="block">
                         <div className="aspect-[2/3] relative overflow-hidden bg-muted">
                           {movie.poster_url ? (
                             <>
