@@ -1,10 +1,17 @@
 'use client'
 
-import { withAuth } from '@/components/auth/with-auth'
 import { useAuth } from '@/components/auth/auth-provider'
+import { redirect } from 'next/navigation'
+import { useEffect } from 'react'
 
-function ProfilePage() {
+export default function ProfilePage() {
   const { user, loading } = useAuth()
+
+  useEffect(() => {
+    if (!loading && !user) {
+      redirect('/')
+    }
+  }, [user, loading])
 
   // Show loading state
   if (loading) {
@@ -52,9 +59,3 @@ function ProfilePage() {
     </div>
   )
 }
-
-// Export the raw component for testing
-export { ProfilePage }
-
-// Export the wrapped component as default
-export default withAuth(ProfilePage)
