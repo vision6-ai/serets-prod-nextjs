@@ -1,0 +1,279 @@
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
+import { Link } from 'app/i18n'
+import { useTranslations } from 'next-intl'
+import Image from 'next/image'
+import { Film, User } from 'lucide-react'
+import { ModeToggle } from './mode-toggle'
+import { LanguageSwitcherClient } from './language-switcher-client'
+import { Search } from './search'
+import { UserProfileMenu } from './user-profile-menu'
+import { MobileMenu } from './mobile-menu'
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from './ui/navigation-menu'
+import { cn } from '@/lib/utils'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import useSWR from 'swr'
+
+import { Genre, Theater } from '@/types/shared'
+
+// Fetch functions
+const fetchCategories = async () => {
+  try {
+    const client = createClientComponentClient()
+    const { data, error } = await client
+      .from('genres')
+      .select('id, name, slug, hebrew_name')
+      .order('name')
+    
+    if (error) {
+      console.error('Error fetching categories:', error.message)
+      return []
+    }
+    
+    console.log('Fetched categories:', data)
+    return data || []
+  } catch (error) {
+    console.error('Exception fetching categories:', error)
+    return []
+  }
+}
+
+const fetchTheaters = async () => {
+  try {
+    const client = createClientComponentClient()
+    const { data, error } = await client
+      .from('theaters')
+      .select('id, name, location, slug')
+      .order('name')
+    
+    if (error) {
+      console.error('Error fetching theaters:', error.message)
+      return []
+    }
+    
+    console.log('Fetched theaters:', data)
+    return data || []
+  } catch (error) {
+    console.error('Exception fetching theaters:', error)
+    return []
+  }
+}
+
+// Top movies data - static to avoid unnecessary fetches
+const topMovies = [
+  { title: 'Latest Releases', href: '/movies/latest' },
+  { title: 'Top Rated', href: '/movies/top-rated' },
+  { title: 'Award Winners', href: '/movies/award-winners' },
+  { title: 'Coming Soon', href: '/movies/coming-soon' }
+]
+
+// Main Header component
+export default function HeaderClient({ locale }: { locale: string }) {
+  const [mounted, setMounted] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const t = useTranslations('navigation')
+  const isRtl = locale === 'he'
+
+  // Fetch data with SWR
+  const { data: categories = [], error: categoriesError } = useSWR<Genre[]>('categories', fetchCategories)
+  
+  useEffect(() => {
+    if (categoriesError) {
+      console.error('SWR categories error:', categoriesError)
+    }
+  }, [categoriesError])
+  const { data: theaters = [] } = useSWR<Theater[]>('theaters', fetchTheaters)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Memoize navigation menu items
+  const navigationMenuItems = useMemo(() => (
+    <NavigationMenuList>
+      <NavigationMenuItem>
+        <NavigationMenuTrigger>{t('categories')}</NavigationMenuTrigger>
+        <NavigationMenuContent>
+          <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+            <li>
+              <Link
+                href="/shorts"
+                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              >
+                <div className="flex items-center gap-2 text-sm font-medium leading-none">
+                  <Film className="h-4 w-4" />
+                  <span>{t('shorts')}</span>
+                </div>
+                <p className="line-clamp-2 text-sm text-muted-foreground">
+                  {t('shortsDescription')}
+                </p>
+              </Link>
+            </li>
+            <li className="md:col-span-2">
+              <div className="border-b my-2" />
+            </li>
+            {categories.map((category) => (
+              <li key={category.slug}>
+                <NavigationMenuLink asChild>
+                  <Link
+                    href={`/genres/${category.slug}`}
+                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  >
+                    <div className="text-sm font-medium leading-none">{category.name}</div>
+                  </Link>
+                </NavigationMenuLink>
+              </li>
+            ))}
+          </ul>
+        </NavigationMenuContent>
+      </NavigationMenuItem>
+
+      <NavigationMenuItem>
+        <NavigationMenuTrigger>Theaters</NavigationMenuTrigger>
+        <NavigationMenuContent>
+          <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+            <li className="md:col-span-2">
+              <Link
+                href="/theaters"
+                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+              >
+                <div className="text-sm font-medium leading-none">All Theaters</div>
+                <p className="line-clamp-2 text-sm text-muted-foreground">
+                  Browse all theaters and cinema locations
+                </p>
+              </Link>
+              <div className="border-b my-2" />
+            </li>
+            
+            {theaters.map((theater) => (
+              <li key={theater.slug}>
+                <NavigationMenuLink asChild>
+                  <Link
+                    href={`/theaters/${theater.slug}`}
+                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  >
+                    <div className="text-sm font-medium leading-none">{theater.name}</div>
+                    <p className="line-clamp-1 text-xs text-muted-foreground mt-1">
+                      {theater.location}
+                    </p>
+                  </Link>
+                </NavigationMenuLink>
+              </li>
+            ))}
+          </ul>
+        </NavigationMenuContent>
+      </NavigationMenuItem>
+
+      <NavigationMenuItem>
+        <NavigationMenuTrigger>{t('movies')}</NavigationMenuTrigger>
+        <NavigationMenuContent>
+          <ul className="grid w-[400px] gap-3 p-4">
+            {topMovies.map((item) => (
+              <li key={item.href}>
+                <NavigationMenuLink asChild>
+                  <Link
+                    href={item.href}
+                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  >
+                    <div className="text-sm font-medium leading-none">{t(item.title.toLowerCase().replace(' ', ''))}</div>
+                  </Link>
+                </NavigationMenuLink>
+              </li>
+            ))}
+          </ul>
+        </NavigationMenuContent>
+      </NavigationMenuItem>
+
+      <NavigationMenuItem>
+        <NavigationMenuLink asChild>
+          <Link href="/actors" className={navigationMenuTriggerStyle()}>
+            {t('actors')}
+          </Link>
+        </NavigationMenuLink>
+      </NavigationMenuItem>
+
+      <NavigationMenuItem>
+        <NavigationMenuLink asChild>
+          <Link href="/blog" className={navigationMenuTriggerStyle()}>
+            {t('blog')}
+          </Link>
+        </NavigationMenuLink>
+      </NavigationMenuItem>
+
+      <NavigationMenuItem>
+        <NavigationMenuLink asChild>
+          <Link href="/shorts" className={navigationMenuTriggerStyle()}>
+            {t('shorts')}
+          </Link>
+        </NavigationMenuLink>
+      </NavigationMenuItem>
+    </NavigationMenuList>
+  ), [categories, theaters, t, locale])
+
+  if (!mounted) {
+    return null
+  }
+
+  return (
+    <header className={cn(
+      "sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+      "theme-transition",
+      scrolled && "shadow-sm"
+    )}>
+      <div className="container flex h-16 items-center justify-between px-4">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="hidden md:block">
+            <Image
+              src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//serets.co.il-logo-v1.svg"
+              alt="SERETS.CO.IL"
+              width={120}
+              height={40}
+              className="h-8 w-auto"
+            />
+          </Link>
+          
+          <div className="hidden md:flex">
+            <NavigationMenu>
+              {navigationMenuItems}
+            </NavigationMenu>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <Search />
+          <ModeToggle />
+          <LanguageSwitcherClient locale={locale} />
+          <UserProfileMenu />
+          <MobileMenu 
+            isOpen={isOpen} 
+            setIsOpen={setIsOpen} 
+            categories={categories} 
+            theaters={theaters} 
+            t={t} 
+            locale={locale} 
+            isRtl={isRtl} 
+          />
+        </div>
+      </div>
+    </header>
+  )
+} 

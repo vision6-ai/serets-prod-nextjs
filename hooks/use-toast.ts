@@ -1,4 +1,4 @@
-import { useToast as useSonnerToast, toast } from 'sonner'
+import { toast } from 'sonner'
 
 type ToastProps = {
   title?: string

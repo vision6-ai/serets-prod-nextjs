@@ -126,5 +126,11 @@
   "movies": {
     "title": "Movies",
     "description": "Browse our collection of Israeli movies"
+  },
+  "genres": {
+    "notFound": "Genre not found",
+    "notFoundDesc": "We couldn't find the genre you requested.",
+    "movieCount": "There are {count} movies in this genre.",
+    "noMovies": "No movies available in this genre."
   }
 }

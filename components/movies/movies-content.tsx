@@ -24,7 +24,11 @@ interface Filters {
   sortOrder: 'asc' | 'desc'
 }
 
-export function MoviesContent() {
+interface MoviesContentProps {
+  locale?: string
+}
+
+export function MoviesContent({ locale }: MoviesContentProps) {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
@@ -141,7 +145,7 @@ export function MoviesContent() {
         ) : (
           <>
             {movies.length > 0 ? (
-              <MovieList movies={movies} />
+              <MovieList movies={movies} locale={locale} />
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">

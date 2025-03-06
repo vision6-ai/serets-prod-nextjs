@@ -4,7 +4,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { locales } from 'config/i18n';
 import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
-import Header from 'components/header';
+import HeaderWrapper from 'components/header-wrapper';
 import Footer from 'components/footer';
 import { PageTransition } from 'components/page-transition';
 import { ThemeProvider } from 'components/theme-provider';
@@ -84,7 +84,7 @@ export default async function LocaleLayout({
         <ThemeProvider>
           <Providers locale={locale} messages={messages}>
             <div className="relative flex min-h-screen flex-col">
-              <Header />
+              <HeaderWrapper />
               <main className="flex-1">
                 <PageTransition>{children}</PageTransition>
               </main>

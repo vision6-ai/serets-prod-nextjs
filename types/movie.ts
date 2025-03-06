@@ -6,6 +6,6 @@ export interface Movie {
   release_date?: string | null
   duration?: number | null
   rating?: number | null
-  poster_url: string
+  poster_url: string | null
   slug: string
 }
