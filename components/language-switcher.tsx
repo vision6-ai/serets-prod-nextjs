@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter } from '@/app/i18n'
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -24,26 +23,22 @@ export function LanguageSwitcher() {
   const pathname = usePathname()
   const router = useRouter()
   
-  // Get current locale from window location
+  // Get current locale from pathname
   const [currentLocale, setCurrentLocale] = useState<Locale>('en')
   
   useEffect(() => {
-    // Update locale based on current URL
-    const path = window.location.pathname
-    setCurrentLocale(path.startsWith('/he') ? 'he' : 'en')
+    // Update locale based on current pathname
+    setCurrentLocale(pathname.startsWith('/he') ? 'he' : 'en')
   }, [pathname])
   
-  const switchLocale = (newLocale: Locale) => {
+  const switchLocale = async (newLocale: Locale) => {
     if (newLocale === currentLocale) return;
     
     // Get the path without the locale prefix
     const newPath = pathname.replace(/^\/(en|he)/, '');
     
-    // Construct the new URL with the new locale
-    const newUrl = newPath === '' ? `/${newLocale}` : `/${newLocale}${newPath}`;
-    
-    // Navigate to new URL
-    window.location.pathname = newUrl;
+    // Navigate to new URL using the router
+    await router.push(newPath === '' ? '/' : newPath, { locale: newLocale })
   }
 
   return (

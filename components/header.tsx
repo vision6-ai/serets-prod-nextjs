@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { Link } from 'app/i18n'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Link } from '@/app/i18n'
 import { useLocale, useTranslations } from 'next-intl'
 import Image from 'next/image'
-import { Film, User } from 'lucide-react'
+import { Film } from 'lucide-react'
 import { ModeToggle } from './mode-toggle'
 import { LanguageSwitcher } from './language-switcher'
 import { Search } from './search'
@@ -23,7 +23,6 @@ import {
 import { cn } from '@/lib/utils'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import useSWR from 'swr'
-
 import { Genre, Theater } from '@/types/shared'
 
 // Fetch functions
@@ -40,7 +39,6 @@ const fetchCategories = async () => {
       return []
     }
     
-    console.log('Fetched categories:', data)
     return data || []
   } catch (error) {
     console.error('Exception fetching categories:', error)
@@ -61,7 +59,6 @@ const fetchTheaters = async () => {
       return []
     }
     
-    console.log('Fetched theaters:', data)
     return data || []
   } catch (error) {
     console.error('Exception fetching theaters:', error)
@@ -94,20 +91,26 @@ export default function Header() {
       console.error('SWR categories error:', categoriesError)
     }
   }, [categoriesError])
+  
   const { data: theaters = [] } = useSWR<Theater[]>('theaters', fetchTheaters)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  useEffect(() => {
-    const handleScroll = () => {
+  const handleScroll = useCallback(() => {
+    if (typeof window !== 'undefined') {
       setScrolled(window.scrollY > 20)
     }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      handleScroll() // Check initial scroll position
+      window.addEventListener('scroll', handleScroll, { passive: true })
+      return () => window.removeEventListener('scroll', handleScroll)
+    }
+  }, [handleScroll])
 
   // Memoize navigation menu items
   const navigationMenuItems = useMemo(() => (
@@ -229,7 +232,7 @@ export default function Header() {
         </NavigationMenuLink>
       </NavigationMenuItem>
     </NavigationMenuList>
-  ), [categories, theaters, t, locale])
+  ), [categories, theaters, t])
 
   if (!mounted) {
     return null

@@ -1,12 +1,14 @@
-import { MovieContent } from '../../../components/movies/movie-content'
+import { MovieContent } from '@/components/movies/movie-content'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { getMovieTranslations, getActorTranslations, getGenreTranslations } from '@/lib/translations'
 import { Database } from '@/types/supabase-types'
+import { Locale } from '@/config/i18n'
+import { unstable_setRequestLocale } from 'next-intl/server'
 
 export const revalidate = 3600
 
-async function getMovieData(slug: string, locale: string) {
+async function getMovieData(slug: string, locale: Locale) {
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -29,7 +31,7 @@ async function getMovieData(slug: string, locale: string) {
   const movieTranslations = await getMovieTranslations(
     supabase,
     movie.id,
-    locale as any
+    locale
   )
 
   // Combine movie data with translations
@@ -79,7 +81,7 @@ async function getMovieData(slug: string, locale: string) {
       const translations = await getActorTranslations(
         supabase,
         c.actor_id,
-        locale as any
+        locale
       )
       
       return {
@@ -98,7 +100,7 @@ async function getMovieData(slug: string, locale: string) {
       const translations = await getGenreTranslations(
         supabase,
         g.genres.id,
-        locale as any
+        locale
       )
       
       return {
@@ -136,7 +138,7 @@ async function getMovieData(slug: string, locale: string) {
       const translations = await getMovieTranslations(
         supabase,
         m.id,
-        locale as any
+        locale
       )
       
       return {
@@ -171,15 +173,14 @@ async function getMovieData(slug: string, locale: string) {
   }
 }
 
-export default async function MoviePage({ params }: { params: { slug: string } }) {
-  // Get the locale from the URL or use default
-  const locale = 'en' // This should be extracted from the URL in a real implementation
+export default async function MoviePage({ params }: { params: { slug: string, locale: Locale } }) {
+  unstable_setRequestLocale(params.locale)
   
-  const data = await getMovieData(params.slug, locale)
+  const data = await getMovieData(params.slug, params.locale)
 
   if (!data) {
     notFound()
   }
 
-  return <MovieContent {...data} locale={locale} />
+  return <MovieContent {...data} locale={params.locale} />
 }

@@ -69,7 +69,7 @@ export function useInView(options = {}) {
   const ref = useRef<HTMLElement | null>(null)
   
   useEffect(() => {
-    if (!ref.current) return
+    if (!ref.current || typeof IntersectionObserver === 'undefined') return
     
     const observer = new IntersectionObserver(([entry]) => {
       setIsInView(entry.isIntersecting)
@@ -94,7 +94,7 @@ export function useInView(options = {}) {
  * @param ttl Time to live in milliseconds
  */
 export function setLocalCache<T>(key: string, data: T, ttl = 3600000): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return
   
   try {
     const item = {
@@ -114,7 +114,7 @@ export function setLocalCache<T>(key: string, data: T, ttl = 3600000): void {
  * @returns Cached data or null if expired/not found
  */
 export function getLocalCache<T>(key: string): T | null {
-  if (typeof window === 'undefined') return null
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return null
   
   try {
     const item = localStorage.getItem(`cache:${key}`)
@@ -138,20 +138,20 @@ export function getLocalCache<T>(key: string): T | null {
  * Capture and report Web Vitals metrics
  */
 export function captureWebVitals(): void {
-  if (typeof window !== 'undefined') {
-    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-      getCLS(sendToAnalytics)
-      getFID(sendToAnalytics)
-      getFCP(sendToAnalytics)
-      getLCP(sendToAnalytics)
-      getTTFB(sendToAnalytics)
-    })
-  }
+  if (typeof window === 'undefined') return
+
+  import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+    getCLS(sendToAnalytics)
+    getFID(sendToAnalytics)
+    getFCP(sendToAnalytics)
+    getLCP(sendToAnalytics)
+    getTTFB(sendToAnalytics)
+  })
 }
 
 function sendToAnalytics(metric: { name: string; value: number; id: string }) {
   // Send to analytics endpoint or log in development
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && typeof window !== 'undefined') {
     // Replace with your analytics endpoint
     fetch('/api/metrics', {
       method: 'POST',
@@ -168,7 +168,7 @@ function sendToAnalytics(metric: { name: string; value: number; id: string }) {
       name: metric.name,
       value: metric.value,
       id: metric.id,
-      page: window.location.pathname
+      page: typeof window !== 'undefined' ? window.location.pathname : '/'
     })
   }
 }
@@ -178,7 +178,7 @@ function sendToAnalytics(metric: { name: string; value: number; id: string }) {
  * @param paths Array of paths to prefetch
  */
 export function prefetchRoutes(paths: string[]): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined' || typeof document === 'undefined') return
   
   // Use requestIdleCallback for non-critical prefetching
   const prefetch = () => {
@@ -205,6 +205,8 @@ export function prefetchRoutes(paths: string[]): void {
 export function withOptimizedImages(Component: React.ComponentType<any>) {
   return function OptimizedComponent(props: any) {
     useEffect(() => {
+      if (typeof window === 'undefined' || typeof document === 'undefined') return
+
       // Add support for native lazy loading where available
       if ('loading' in HTMLImageElement.prototype) {
         const images = document.querySelectorAll('img[data-src]')
@@ -215,23 +217,25 @@ export function withOptimizedImages(Component: React.ComponentType<any>) {
         })
       } else {
         // Fallback to IntersectionObserver
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              const img = entry.target as HTMLImageElement
-              img.src = img.dataset.src!
-              img.onload = () => {
-                img.classList.add('loaded')
-                img.removeAttribute('data-src')
+        if (typeof IntersectionObserver !== 'undefined') {
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                const img = entry.target as HTMLImageElement
+                img.src = img.dataset.src!
+                img.onload = () => {
+                  img.classList.add('loaded')
+                  img.removeAttribute('data-src')
+                }
+                observer.unobserve(img)
               }
-              observer.unobserve(img)
-            }
+            })
           })
-        })
-        
-        document.querySelectorAll('img[data-src]').forEach(img => {
-          observer.observe(img)
-        })
+          
+          document.querySelectorAll('img[data-src]').forEach(img => {
+            observer.observe(img)
+          })
+        }
       }
     }, [])
     

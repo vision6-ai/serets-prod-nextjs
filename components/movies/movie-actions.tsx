@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { useAuth } from 'components/auth/auth-provider'
-import { AuthDialog } from 'components/auth/auth-dialog'
-import { Button } from 'components/ui/button'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/components/auth/auth-provider'
+import { AuthDialog } from '@/components/auth/auth-dialog'
+import { Button } from '@/components/ui/button'
 import { Play } from 'lucide-react'
 
 interface MovieActionsProps {
@@ -13,7 +13,12 @@ interface MovieActionsProps {
 
 export function MovieActions({ movieId, trailerUrl }: MovieActionsProps) {
   const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [currentUrl, setCurrentUrl] = useState<string>('')
   const { user } = useAuth()
+
+  useEffect(() => {
+    setCurrentUrl(window.location.href)
+  }, [])
 
   const handleTrailerClick = () => {
     if (trailerUrl) {
@@ -33,7 +38,7 @@ export function MovieActions({ movieId, trailerUrl }: MovieActionsProps) {
       <AuthDialog
         open={showAuthDialog}
         onOpenChange={setShowAuthDialog}
-        redirectTo={window?.location?.href}
+        redirectTo={currentUrl}
       />
     </>
   )

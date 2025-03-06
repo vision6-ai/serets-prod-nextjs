@@ -3,54 +3,43 @@
 import { useAuth } from '@/components/auth/auth-provider'
 import { MovieActions } from './movie-actions'
 import { MovieSlider } from './movie-slider'
-import { useLocale } from 'next-intl'
 import type { Movie } from '@/types/movie'
 
-interface Actor {
-  id: string
-  name: string
-  hebrew_name: string | null
-  slug: string
-  photo_url: string | null
-  role: string | null
-}
-
-interface Genre {
-  id: string
-  name: string
-  hebrew_name: string | null
-  slug: string
-}
-
-interface Award {
-  id: string
-  name: string
-  category: string
-  year: number
-  is_winner: boolean
-}
-
-interface Video {
-  id: string
-  title: string | null
-  url: string
-  type: 'trailer' | 'clip' | 'featurette'
-}
-
-interface MovieDetails extends Omit<Movie, 'poster_url'> {
-  poster_url: string | null
-  backdrop_url: string | null
-  trailer_url: string | null
-}
-
 interface MovieContentProps {
-  movie: MovieDetails
-  videos: Video[]
-  cast: Actor[]
-  genres: Genre[]
-  awards: Award[]
+  movie: Movie & {
+    poster_url: string | null
+    backdrop_url: string | null
+    trailer_url: string | null
+  }
+  videos: {
+    id: string
+    title: string | null
+    url: string
+    type: 'trailer' | 'clip' | 'featurette'
+  }[]
+  cast: {
+    id: string
+    name: string
+    hebrew_name: string | null
+    slug: string
+    photo_url: string | null
+    role: string | null
+  }[]
+  genres: {
+    id: string
+    name: string
+    hebrew_name: string | null
+    slug: string
+  }[]
+  awards: {
+    id: string
+    name: string
+    category: string
+    year: number
+    is_winner: boolean
+  }[]
   similarMovies: Movie[]
-  locale?: string
+  locale: string
 }
 
 export function MovieContent({
@@ -60,11 +49,9 @@ export function MovieContent({
   genres,
   awards,
   similarMovies,
-  locale: propLocale
+  locale
 }: MovieContentProps) {
   const { user } = useAuth()
-  const contextLocale = useLocale()
-  const locale = propLocale || contextLocale
   const trailer = videos.find(v => v.type === 'trailer')
 
   return (

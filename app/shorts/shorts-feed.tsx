@@ -67,6 +67,8 @@ export default function ShortsFeed({ videos, initialVideoId }: ShortsFeedProps) 
 
   // Performance monitoring
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
     let animationFrameId: number
 
     const measurePerformance = () => {
@@ -199,6 +201,8 @@ export default function ShortsFeed({ videos, initialVideoId }: ShortsFeedProps) 
   }, [activeIndex, videos.length])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])

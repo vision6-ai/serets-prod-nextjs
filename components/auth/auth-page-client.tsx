@@ -43,7 +43,10 @@ export function AuthPageClient() {
   const [signUpErrorMessage, setSignUpErrorMessage] = useState('')
 
   useEffect(() => {
-    setOrigin(window.location.origin)
+    // Only access window on the client side
+    if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin)
+    }
     
     // Check if user is already authenticated
     const checkAuth = async () => {
@@ -304,4 +307,4 @@ export function AuthPageClient() {
       </Card>
     </div>
   )
-} 
+}

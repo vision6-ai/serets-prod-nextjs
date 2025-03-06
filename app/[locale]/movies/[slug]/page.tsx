@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { getMovieTranslations, getActorTranslations, getGenreTranslations } from '@/lib/translations'
 import { Database } from '@/types/supabase-types'
 import { Locale } from '@/config/i18n'
+import { unstable_setRequestLocale } from 'next-intl/server'
 
 export const revalidate = 3600
 
@@ -173,6 +174,8 @@ async function getMovieData(slug: string, locale: Locale) {
 }
 
 export default async function MoviePage({ params }: { params: { slug: string, locale: Locale } }) {
+  unstable_setRequestLocale(params.locale)
+  
   const data = await getMovieData(params.slug, params.locale)
 
   if (!data) {
