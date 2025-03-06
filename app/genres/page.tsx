@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabase'
 
 interface Genre {
   name: string
-  hebrew_name: string | null
   slug: string
 }
 
@@ -19,13 +18,30 @@ export default function GenresPage() {
   useEffect(() => {
     async function fetchGenres() {
       try {
+        // Use the new schema with translations
         const { data, error } = await supabase
           .from('genres')
-          .select('name, hebrew_name, slug')
-          .order('name')
+          .select(`
+            id, 
+            slug,
+            translations:genre_translations(name, language_code)
+          `)
+          .order('slug')
 
         if (error) throw error
-        setGenres(data || [])
+        
+        // Transform the data to match the expected format
+        const transformedData = data?.map(genre => {
+          // Find English translation
+          const englishTranslation = genre.translations?.find(t => t.language_code === 'en')
+          
+          return {
+            name: englishTranslation?.name || genre.slug,
+            slug: genre.slug
+          }
+        }) || []
+        
+        setGenres(transformedData)
       } catch (error) {
         console.error('Error fetching genres:', error)
       } finally {
@@ -65,9 +81,6 @@ export default function GenresPage() {
                 <Link href={`/genres/${genre.slug}`}>
                   <CardContent className="p-6 text-center hover:bg-accent/5 transition-colors">
                     <h2 className="text-xl font-semibold mb-2">{genre.name}</h2>
-                    {genre.hebrew_name && (
-                      <p className="text-muted-foreground">{genre.hebrew_name}</p>
-                    )}
                   </CardContent>
                 </Link>
               </Card>

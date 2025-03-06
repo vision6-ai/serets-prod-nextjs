@@ -31,10 +31,14 @@ export function GenreContent() {
   useEffect(() => {
     async function fetchGenreData() {
       try {
-        // First get the genre details
+        // First get the genre details with translations
         const { data: genreData, error: genreError } = await supabase
           .from('genres')
-          .select('id, name, slug')
+          .select(`
+            id, 
+            slug,
+            translations:genre_translations(name, language_code)
+          `)
           .eq('slug', slug)
           .single()
 
@@ -44,7 +48,18 @@ export function GenreContent() {
         }
 
         if (genreData) {
-          setGenre(genreData)
+          // Find English translation or fallback to slug
+          const englishTranslation = genreData.translations?.find(t => t.language_code === 'en')
+          const genreName = englishTranslation?.name || genreData.slug
+          
+          // Create genre object with the translated name
+          const genre = {
+            id: genreData.id,
+            name: genreName,
+            slug: genreData.slug
+          }
+          
+          setGenre(genre)
 
           // Get movie IDs for this genre
           const { data: movieGenres, error: movieGenresError } = await supabase
@@ -62,7 +77,19 @@ export function GenreContent() {
             const movieIds = movieGenres.map(mg => mg.movie_id)
             const { data: moviesData, error: moviesError } = await supabase
               .from('movies')
-              .select('*')
+              .select(`
+                id,
+                slug,
+                release_date,
+                duration,
+                rating,
+                translations:movie_translations(
+                  title,
+                  synopsis,
+                  poster_url,
+                  language_code
+                )
+              `)
               .in('id', movieIds)
               .order('release_date', { ascending: false })
 
@@ -72,7 +99,23 @@ export function GenreContent() {
             }
 
             if (moviesData) {
-              setMovies(moviesData)
+              // Transform movie data to include translations
+              const transformedMovies = moviesData.map(movie => {
+                const englishTranslation = movie.translations?.find(t => t.language_code === 'en')
+                const hebrewTranslation = movie.translations?.find(t => t.language_code === 'he')
+                
+                return {
+                  id: movie.id,
+                  title: englishTranslation?.title || movie.slug,
+                  hebrew_title: hebrewTranslation?.title || null,
+                  release_date: movie.release_date,
+                  poster_url: englishTranslation?.poster_url || null,
+                  rating: movie.rating,
+                  slug: movie.slug
+                }
+              })
+              
+              setMovies(transformedMovies)
             }
           } else {
             setMovies([])
