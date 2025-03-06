@@ -2,6 +2,10 @@ import { createClient } from '@supabase/supabase-js'
 import { Link } from '@/app/i18n'
 import Image from 'next/image'
 import { useLocale } from 'next-intl'
+import { getActorTranslations } from '@/lib/translations'
+import { Database } from '@/types/supabase-types'
+import { Locale } from '@/config/i18n'
+import { unstable_setRequestLocale } from 'next-intl/server'
 
 interface Actor {
   id: string
@@ -13,22 +17,46 @@ interface Actor {
 
 export const revalidate = 3600
 
-async function getActors() {
-  const supabase = createClient(
+async function getActors(locale: Locale) {
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const { data: actors } = await supabase
+  // Get all actors from the base table
+  const { data: actorsData } = await supabase
     .from('actors')
     .select('*')
     .order('name')
 
-  return actors as Actor[] || []
+  if (!actorsData || actorsData.length === 0) {
+    return []
+  }
+
+  // Get translations for each actor
+  const actorsWithTranslations = await Promise.all(
+    actorsData.map(async (actor) => {
+      const translations = await getActorTranslations(
+        supabase,
+        actor.id,
+        locale
+      )
+      
+      return {
+        ...actor,
+        name: translations.name || actor.name,
+        hebrew_name: locale === 'he' ? translations.name : actor.hebrew_name
+      }
+    })
+  )
+
+  return actorsWithTranslations as Actor[]
 }
 
-export default async function ActorsPage() {
-  const actors = await getActors()
+export default async function ActorsPage({ params }: { params: { locale: Locale } }) {
+  unstable_setRequestLocale(params.locale)
+  
+  const actors = await getActors(params.locale)
 
   return (
     <div className="container mx-auto px-4 py-16">

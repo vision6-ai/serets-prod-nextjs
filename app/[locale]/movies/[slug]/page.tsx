@@ -1,15 +1,19 @@
-import { MovieContent } from 'components/movies/movie-content'
+import { MovieContent } from '@/components/movies/movie-content'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
+import { getMovieTranslations, getActorTranslations, getGenreTranslations } from '@/lib/translations'
+import { Database } from '@/types/supabase-types'
+import { Locale } from '@/config/i18n'
 
 export const revalidate = 3600
 
-async function getMovieData(slug: string) {
-  const supabase = createClient(
+async function getMovieData(slug: string, locale: Locale) {
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
   
+  // Get the movie from the base table
   const movieResult = await supabase
     .from('movies')
     .select('*')
@@ -22,6 +26,21 @@ async function getMovieData(slug: string) {
 
   const movie = movieResult.data
 
+  // Get movie translations
+  const movieTranslations = await getMovieTranslations(
+    supabase,
+    movie.id,
+    locale
+  )
+
+  // Combine movie data with translations
+  const movieWithTranslations = {
+    ...movie,
+    title: movieTranslations.title || movie.title,
+    hebrew_title: locale === 'he' ? movieTranslations.title : movie.hebrew_title,
+    synopsis: movieTranslations.synopsis || movie.synopsis
+  }
+
   const [videosRes, castRes, genresRes, awardsRes] = await Promise.all([
     supabase
       .from('movie_videos')
@@ -33,25 +52,14 @@ async function getMovieData(slug: string) {
       .select(`
         actor_id,
         role,
-        actors (
-          id,
-          name,
-          hebrew_name,
-          slug,
-          photo_url
-        )
+        actors!inner (id, slug, birth_date, birth_place, photo_url)
       `)
       .eq('movie_id', movie.id),
     
     supabase
       .from('movie_genres')
       .select(`
-        genres (
-          id,
-          name,
-          hebrew_name,
-          slug
-        )
+        genres!inner (id, slug)
       `)
       .eq('movie_id', movie.id),
     
@@ -61,66 +69,101 @@ async function getMovieData(slug: string) {
         award_id,
         year,
         is_winner,
-        awards (
-          id,
-          name,
-          category
-        )
+        awards!inner (id, category, year)
       `)
       .eq('movie_id', movie.id)
   ])
 
+  // Get translations for actors, genres, and awards
+  const castWithTranslations = await Promise.all(
+    (castRes.data || []).map(async (c: any) => {
+      const translations = await getActorTranslations(
+        supabase,
+        c.actor_id,
+        locale
+      )
+      
+      return {
+        id: c.actor_id,
+        name: translations.name || '',
+        hebrew_name: locale === 'en' ? translations.name : null,
+        slug: c.actors.slug,
+        photo_url: c.actors.photo_url,
+        role: c.role
+      }
+    })
+  )
+
+  const genresWithTranslations = await Promise.all(
+    (genresRes.data || []).map(async (g: any) => {
+      const translations = await getGenreTranslations(
+        supabase,
+        g.genres.id,
+        locale
+      )
+      
+      return {
+        id: g.genres.id,
+        name: translations.name || '',
+        hebrew_name: locale === 'en' ? translations.name : null,
+        slug: g.genres.slug
+      }
+    })
+  )
+
   // Get genre IDs for similar movies query
   const genreIds = (genresRes.data || []).map((g: any) => g.genres.id)
 
-  // Get similar movies using a direct join query
-  const { data: similarMovies } = await supabase
+  // Get similar movies using direct table queries
+  const { data: similarMoviesData } = await supabase
     .from('movie_genres')
-    .select(`
-      movie_id,
-      movies!inner (
-        id,
-        title,
-        hebrew_title,
-        synopsis,
-        release_date,
-        duration,
-        rating,
-        poster_url,
-        slug
-      )
-    `)
+    .select('movie_id')
     .in('genre_id', genreIds)
     .neq('movie_id', movie.id)
     .order('movie_id', { ascending: false })
     .limit(6)
 
+  // Get the actual movie data for similar movies
+  const similarMovieIds = (similarMoviesData || []).map(item => item.movie_id)
+  
+  const { data: similarMoviesRaw } = await supabase
+    .from('movies')
+    .select('*')
+    .in('id', similarMovieIds)
+  
+  // Get translations for similar movies
+  const similarMoviesWithTranslations = await Promise.all(
+    (similarMoviesRaw || []).map(async (m) => {
+      const translations = await getMovieTranslations(
+        supabase,
+        m.id,
+        locale
+      )
+      
+      return {
+        ...m,
+        title: translations.title || m.title,
+        hebrew_title: locale === 'he' ? translations.title : m.hebrew_title,
+        synopsis: translations.synopsis || m.synopsis
+      }
+    })
+  )
+
+  // Remove duplicates
   const uniqueSimilarMovies = Array.from(
     new Map(
-      (similarMovies || []).map((item: any) => [item.movies.id, item.movies])
+      similarMoviesWithTranslations.map(item => [item.id, item])
     ).values()
   ).slice(0, 6)
 
   return {
-    movie,
+    movie: movieWithTranslations,
     videos: videosRes.data || [],
-    cast: castRes.data?.map((c: any) => ({
-      id: c.actors.id,
-      name: c.actors.name,
-      hebrew_name: c.actors.hebrew_name,
-      slug: c.actors.slug,
-      photo_url: c.actors.photo_url,
-      role: c.role
-    })) || [],
-    genres: genresRes.data?.map((g: any) => ({
-      id: g.genres.id,
-      name: g.genres.name,
-      hebrew_name: g.genres.hebrew_name,
-      slug: g.genres.slug
-    })) || [],
+    cast: castWithTranslations,
+    genres: genresWithTranslations,
     awards: awardsRes.data?.map((a: any) => ({
       id: a.awards.id,
-      name: a.awards.name,
+      name: a.awards.name || '',
       category: a.awards.category,
       year: a.year,
       is_winner: a.is_winner
@@ -129,19 +172,12 @@ async function getMovieData(slug: string) {
   }
 }
 
-export default async function MoviePage({ 
-  params 
-}: { 
-  params: { 
-    slug: string,
-    locale: string 
-  } 
-}) {
-  const data = await getMovieData(params.slug)
+export default async function MoviePage({ params }: { params: { slug: string, locale: Locale } }) {
+  const data = await getMovieData(params.slug, params.locale)
 
   if (!data) {
     notFound()
   }
 
-  return <MovieContent {...data} />
+  return <MovieContent {...data} locale={params.locale} />
 }

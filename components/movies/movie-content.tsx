@@ -50,6 +50,7 @@ interface MovieContentProps {
   genres: Genre[]
   awards: Award[]
   similarMovies: Movie[]
+  locale?: string
 }
 
 export function MovieContent({
@@ -58,10 +59,12 @@ export function MovieContent({
   cast,
   genres,
   awards,
-  similarMovies
+  similarMovies,
+  locale: propLocale
 }: MovieContentProps) {
   const { user } = useAuth()
-  const locale = useLocale()
+  const contextLocale = useLocale()
+  const locale = propLocale || contextLocale
   const trailer = videos.find(v => v.type === 'trailer')
 
   return (

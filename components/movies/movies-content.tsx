@@ -28,7 +28,7 @@ interface MoviesContentProps {
   locale?: string
 }
 
-export function MoviesContent({ locale }: MoviesContentProps) {
+export function MoviesContent({ locale = 'en' }: MoviesContentProps) {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
@@ -105,7 +105,45 @@ export function MoviesContent({ locale }: MoviesContentProps) {
       
       // Only update if these are still the current filters
       if (JSON.stringify(filters) === JSON.stringify(currentFilters.current)) {
-        setMovies(data || [])
+        // Get translations for the movies
+        const moviesWithTranslations = await Promise.all(
+          (data || []).map(async (movie) => {
+            // Get translations for this movie
+            const { data: translations } = await supabase
+              .from('movie_translations')
+              .select('*')
+              .eq('movie_id', movie.id)
+              .eq('language_code', locale)
+              .single();
+            
+            // If no translation in requested locale, try to get English translation
+            if (!translations) {
+              const { data: enTranslations } = await supabase
+                .from('movie_translations')
+                .select('*')
+                .eq('movie_id', movie.id)
+                .eq('language_code', 'en')
+                .single();
+                
+              return {
+                ...movie,
+                title: enTranslations?.title || movie.title,
+                hebrew_title: locale === 'he' ? enTranslations?.title : movie.hebrew_title,
+                synopsis: enTranslations?.synopsis || movie.synopsis
+              };
+            }
+            
+            // Return movie with translations
+            return {
+              ...movie,
+              title: translations.title || movie.title,
+              hebrew_title: locale === 'he' ? translations.title : movie.hebrew_title,
+              synopsis: translations.synopsis || movie.synopsis
+            };
+          })
+        );
+        
+        setMovies(moviesWithTranslations || [])
       }
     } catch (error) {
       console.error('Error fetching movies:', error)
@@ -116,7 +154,7 @@ export function MoviesContent({ locale }: MoviesContentProps) {
         setLoading(false)
       }
     }
-  }, [category, supabase])
+  }, [category, supabase, locale])
 
   useEffect(() => {
     const initialFilters: Filters = {

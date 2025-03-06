@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import Image from 'next/image'
+import { getActorTranslations } from '@/lib/translations'
+import { Database } from '@/types/supabase-types'
 
 interface Actor {
   id: string
@@ -12,22 +14,47 @@ interface Actor {
 
 export const revalidate = 3600
 
-async function getActors() {
-  const supabase = createClient(
+async function getActors(locale: string = 'en') {
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const { data: actors } = await supabase
+  // Get all actors from the base table
+  const { data: actorsData } = await supabase
     .from('actors')
     .select('*')
     .order('name')
 
-  return actors as Actor[] || []
+  if (!actorsData || actorsData.length === 0) {
+    return []
+  }
+
+  // Get translations for each actor
+  const actorsWithTranslations = await Promise.all(
+    actorsData.map(async (actor) => {
+      const translations = await getActorTranslations(
+        supabase,
+        actor.id,
+        locale as any
+      )
+      
+      return {
+        ...actor,
+        name: translations.name || actor.name,
+        hebrew_name: locale === 'he' ? translations.name : actor.hebrew_name
+      }
+    })
+  )
+
+  return actorsWithTranslations as Actor[]
 }
 
 export default async function ActorsPage() {
-  const actors = await getActors()
+  // In a real implementation, you would get the locale from the URL
+  const locale = 'en'
+  
+  const actors = await getActors(locale)
 
   return (
     <div className="container mx-auto px-4 py-16">

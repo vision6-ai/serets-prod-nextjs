@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase'
+import { useLocale } from 'next-intl'
 
 interface Actor {
   id: string
@@ -14,22 +15,92 @@ interface Actor {
   slug: string
 }
 
+interface ActorTranslation {
+  id: string
+  actor_id: string
+  language_code: string
+  name: string
+  biography: string | null
+}
+
 export function FeaturedActors() {
   const [actors, setActors] = useState<Actor[]>([])
   const [loading, setLoading] = useState(true)
+  const locale = useLocale() as string
   const supabase = createClient()
 
   useEffect(() => {
     async function fetchActors() {
       try {
-        const { data, error } = await supabase
+        // Get actors from the base table
+        const { data: actorsData, error } = await supabase
           .from('actors')
           .select('*')
           .limit(6)
           .order('created_at', { ascending: false })
         
         if (error) throw error
-        setActors(data || [])
+        
+        if (!actorsData || actorsData.length === 0) {
+          setActors([])
+          return
+        }
+        
+        // Get translations for each actor
+        const actorIds = actorsData.map(actor => actor.id)
+        
+        // Get translations for the current locale
+        const { data: currentLocaleTranslations } = await supabase
+          .from('actor_translations')
+          .select('*')
+          .in('actor_id', actorIds)
+          .eq('language_code', locale)
+        
+        // Create a map of translations by actor_id
+        const translationsByActorId: Record<string, ActorTranslation> = {}
+        
+        // Add current locale translations to the map
+        if (currentLocaleTranslations) {
+          for (const translation of currentLocaleTranslations) {
+            translationsByActorId[translation.actor_id] = translation as ActorTranslation
+          }
+        }
+        
+        // If we don't have translations for all actors in the current locale and it's not English,
+        // get English translations for the missing actors
+        if (locale !== 'en') {
+          const missingActorIds = actorIds.filter(id => !translationsByActorId[id])
+          
+          if (missingActorIds.length > 0) {
+            const { data: englishTranslations } = await supabase
+              .from('actor_translations')
+              .select('*')
+              .in('actor_id', missingActorIds)
+              .eq('language_code', 'en')
+            
+            // Add English translations to the map
+            if (englishTranslations) {
+              for (const translation of englishTranslations) {
+                if (!translationsByActorId[translation.actor_id]) {
+                  translationsByActorId[translation.actor_id] = translation as ActorTranslation
+                }
+              }
+            }
+          }
+        }
+        
+        // Combine actor data with translations
+        const actorsWithTranslations = actorsData.map(actor => {
+          const translation = translationsByActorId[actor.id]
+          
+          return {
+            ...actor,
+            name: translation?.name || actor.name,
+            hebrew_name: locale === 'he' ? translation?.name : actor.hebrew_name
+          }
+        })
+        
+        setActors(actorsWithTranslations)
       } catch (error) {
         console.error('Error fetching actors:', error)
       } finally {
@@ -38,7 +109,7 @@ export function FeaturedActors() {
     }
 
     fetchActors()
-  }, [supabase])
+  }, [supabase, locale])
 
   return (
     <section className="py-12">

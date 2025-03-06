@@ -3,6 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { Link } from '@/app/i18n'
 import { useLocale } from 'next-intl'
+import { getActorTranslations, getMovieTranslations } from '@/lib/translations'
+import { Database } from '@/types/supabase-types'
+import { Locale } from '@/config/i18n'
+import { unstable_setRequestLocale } from 'next-intl/server'
 
 interface Actor {
   id: string
@@ -21,6 +25,7 @@ interface MovieData {
   poster_url: string | null
   rating: number | null
   slug: string
+  synopsis?: string | null
 }
 
 interface MovieActorJoin {
@@ -34,22 +39,39 @@ interface MovieWithRole extends MovieData {
 
 export const revalidate = 3600
 
-async function getActorData(slug: string) {
-  const supabase = createClient(
+async function getActorData(slug: string, locale: Locale) {
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const { data: actor } = await supabase
+  // Get the actor from the base table
+  const { data: actorData } = await supabase
     .from('actors')
     .select('*')
     .eq('slug', slug)
     .single()
 
-  if (!actor) {
+  if (!actorData) {
     return null
   }
 
+  // Get actor translations
+  const actorTranslations = await getActorTranslations(
+    supabase,
+    actorData.id,
+    locale
+  )
+
+  // Combine actor data with translations
+  const actor = {
+    ...actorData,
+    name: actorTranslations.name || actorData.name,
+    hebrew_name: locale === 'he' ? actorTranslations.name : actorData.hebrew_name,
+    bio: actorTranslations.biography || actorData.biography
+  }
+
+  // Get movies the actor has appeared in
   const { data: movieActors } = await supabase
     .from('movie_actors')
     .select(`
@@ -71,19 +93,35 @@ async function getActorData(slug: string) {
     movies: MovieData;
   }[]
 
-  const movies: MovieWithRole[] = typedMovieActors.map(m => ({
-    ...m.movies,
-    role: m.role
-  }))
+  // Get translations for each movie
+  const moviesWithTranslations = await Promise.all(
+    typedMovieActors.map(async (m) => {
+      const translations = await getMovieTranslations(
+        supabase,
+        m.movies.id,
+        locale
+      )
+      
+      return {
+        ...m.movies,
+        title: translations.title || m.movies.title,
+        hebrew_title: locale === 'he' ? translations.title : m.movies.hebrew_title,
+        synopsis: translations.synopsis || m.movies.synopsis,
+        role: m.role
+      }
+    })
+  )
 
   return {
     actor: actor as Actor,
-    movies
+    movies: moviesWithTranslations
   }
 }
 
-export default async function ActorPage({ params }: { params: { slug: string; locale: string } }) {
-  const data = await getActorData(params.slug)
+export default async function ActorPage({ params }: { params: { slug: string; locale: Locale } }) {
+  unstable_setRequestLocale(params.locale)
+  
+  const data = await getActorData(params.slug, params.locale)
 
   if (!data) {
     return (
@@ -130,7 +168,7 @@ export default async function ActorPage({ params }: { params: { slug: string; lo
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {movies.map((movie) => (
                 <div key={movie.id} className="group">
-                  <Link href={`/movies/${movie.slug}`} locale={params.locale as 'en' | 'he'} className="block">
+                  <Link href={`/movies/${movie.slug}`} locale={params.locale} className="block">
                     {movie.poster_url ? (
                       <Image
                         src={movie.poster_url}

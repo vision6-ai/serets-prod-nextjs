@@ -1,6 +1,8 @@
 import Image from 'next/image'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
+import { getActorTranslations, getMovieTranslations } from '@/lib/translations'
+import { Database } from '@/types/supabase-types'
 
 interface Actor {
   id: string
@@ -19,6 +21,7 @@ interface MovieData {
   poster_url: string | null
   rating: number | null
   slug: string
+  synopsis?: string | null
 }
 
 interface MovieActorJoin {
@@ -32,22 +35,39 @@ interface MovieWithRole extends MovieData {
 
 export const revalidate = 3600
 
-async function getActorData(slug: string) {
-  const supabase = createClient(
+async function getActorData(slug: string, locale: string = 'en') {
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const { data: actor } = await supabase
+  // Get the actor from the base table
+  const { data: actorData } = await supabase
     .from('actors')
     .select('*')
     .eq('slug', slug)
     .single()
 
-  if (!actor) {
+  if (!actorData) {
     return null
   }
 
+  // Get actor translations
+  const actorTranslations = await getActorTranslations(
+    supabase,
+    actorData.id,
+    locale as any
+  )
+
+  // Combine actor data with translations
+  const actor = {
+    ...actorData,
+    name: actorTranslations.name || actorData.name,
+    hebrew_name: locale === 'he' ? actorTranslations.name : actorData.hebrew_name,
+    bio: actorTranslations.biography || actorData.biography
+  }
+
+  // Get movies the actor has appeared in
   const { data: movieActors } = await supabase
     .from('movie_actors')
     .select(`
@@ -69,19 +89,36 @@ async function getActorData(slug: string) {
     movies: MovieData;
   }[]
 
-  const movies: MovieWithRole[] = typedMovieActors.map(m => ({
-    ...m.movies,
-    role: m.role
-  }))
+  // Get translations for each movie
+  const moviesWithTranslations = await Promise.all(
+    typedMovieActors.map(async (m) => {
+      const translations = await getMovieTranslations(
+        supabase,
+        m.movies.id,
+        locale as any
+      )
+      
+      return {
+        ...m.movies,
+        title: translations.title || m.movies.title,
+        hebrew_title: locale === 'he' ? translations.title : m.movies.hebrew_title,
+        synopsis: translations.synopsis || m.movies.synopsis,
+        role: m.role
+      }
+    })
+  )
 
   return {
     actor: actor as Actor,
-    movies
+    movies: moviesWithTranslations
   }
 }
 
 export default async function ActorPage({ params }: { params: { slug: string } }) {
-  const data = await getActorData(params.slug)
+  // In a real implementation, you would get the locale from the URL
+  const locale = 'en'
+  
+  const data = await getActorData(params.slug, locale)
 
   if (!data) {
     return (

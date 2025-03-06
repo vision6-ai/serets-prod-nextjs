@@ -1,7 +1,9 @@
 'use client'
 
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { usePathname, useRouter } from '@/app/i18n'
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -10,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Check } from 'lucide-react'
-import { localeNames, type Locale } from '@/config/i18n'
+import { localeNames, type Locale, locales } from '@/config/i18n'
 
 // Map of locale codes to flag emojis
 const localeFlags: Record<string, string> = {
@@ -19,13 +21,29 @@ const localeFlags: Record<string, string> = {
 }
 
 export function LanguageSwitcher() {
-  const locale = useLocale() as Locale
-  const router = useRouter()
   const pathname = usePathname()
-  const t = useTranslations('common')
-
+  const router = useRouter()
+  
+  // Get current locale from window location
+  const [currentLocale, setCurrentLocale] = useState<Locale>('en')
+  
+  useEffect(() => {
+    // Update locale based on current URL
+    const path = window.location.pathname
+    setCurrentLocale(path.startsWith('/he') ? 'he' : 'en')
+  }, [pathname])
+  
   const switchLocale = (newLocale: Locale) => {
-    router.replace(pathname, { locale: newLocale })
+    if (newLocale === currentLocale) return;
+    
+    // Get the path without the locale prefix
+    const newPath = pathname.replace(/^\/(en|he)/, '');
+    
+    // Construct the new URL with the new locale
+    const newUrl = newPath === '' ? `/${newLocale}` : `/${newLocale}${newPath}`;
+    
+    // Navigate to new URL
+    window.location.pathname = newUrl;
   }
 
   return (
@@ -33,8 +51,8 @@ export function LanguageSwitcher() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="flex items-center gap-2 h-9 px-3">
-            <span className="text-base">{localeFlags[locale]}</span>
-            <span className="font-medium">{localeNames[locale]}</span>
+            <span className="text-base">{localeFlags[currentLocale]}</span>
+            <span className="font-medium">{localeNames[currentLocale]}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
@@ -48,7 +66,7 @@ export function LanguageSwitcher() {
                 <span className="text-base">{localeFlags[code]}</span>
                 <span>{name}</span>
               </div>
-              {locale === code && <Check className="h-4 w-4" />}
+              {currentLocale === code && <Check className="h-4 w-4" />}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

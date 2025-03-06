@@ -12,7 +12,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { createClient, supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
+import { useLocale } from 'next-intl'
 
 interface SearchResult {
   id: string
@@ -22,6 +23,7 @@ interface SearchResult {
   release_date?: string | null
   type: 'movie' | 'actor'
   photo_url?: string | null
+  slug?: string
 }
 
 export function SearchDialog() {
@@ -30,6 +32,7 @@ export function SearchDialog() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
+  const locale = useLocale() as string
 
   const handleSearch = async (value: string) => {
     setQuery(value)
@@ -40,21 +43,75 @@ export function SearchDialog() {
 
     setLoading(true)
     try {
+      // Get base movie and actor data
       const [moviesRes, actorsRes] = await Promise.all([
         supabase
           .from('movies')
-          .select('id, title, poster_url, release_date')
+          .select('id, title, poster_url, release_date, slug')
           .ilike('title', `%${value}%`)
           .limit(5),
         supabase
           .from('actors')
-          .select('id, name, photo_url')
+          .select('id, name, photo_url, slug')
           .ilike('name', `%${value}%`)
           .limit(5)
       ])
 
       const movies = (moviesRes.data || []).map(m => ({ ...m, type: 'movie' as const }))
       const actors = (actorsRes.data || []).map(a => ({ ...a, type: 'actor' as const }))
+      
+      // If we have results and we're not in English locale, get translations
+      if ((movies.length > 0 || actors.length > 0) && locale !== 'en') {
+        // Get movie translations
+        if (movies.length > 0) {
+          const movieIds = movies.map(m => m.id)
+          const { data: movieTranslations } = await supabase
+            .from('movie_translations')
+            .select('movie_id, title')
+            .in('movie_id', movieIds)
+            .eq('language_code', locale)
+          
+          // Apply translations
+          if (movieTranslations && movieTranslations.length > 0) {
+            const translationsMap = movieTranslations.reduce((acc, t) => {
+              acc[t.movie_id] = t
+              return acc
+            }, {} as Record<string, any>)
+            
+            // Update movie titles with translations
+            movies.forEach(movie => {
+              if (translationsMap[movie.id]) {
+                movie.title = translationsMap[movie.id].title
+              }
+            })
+          }
+        }
+        
+        // Get actor translations
+        if (actors.length > 0) {
+          const actorIds = actors.map(a => a.id)
+          const { data: actorTranslations } = await supabase
+            .from('actor_translations')
+            .select('actor_id, name')
+            .in('actor_id', actorIds)
+            .eq('language_code', locale)
+          
+          // Apply translations
+          if (actorTranslations && actorTranslations.length > 0) {
+            const translationsMap = actorTranslations.reduce((acc, t) => {
+              acc[t.actor_id] = t
+              return acc
+            }, {} as Record<string, any>)
+            
+            // Update actor names with translations
+            actors.forEach(actor => {
+              if (translationsMap[actor.id]) {
+                actor.name = translationsMap[actor.id].name
+              }
+            })
+          }
+        }
+      }
       
       setResults([...movies, ...actors])
     } catch (error) {
@@ -104,15 +161,9 @@ export function SearchDialog() {
                   <div
                     key={result.id}
                     className="p-2 hover:bg-accent/50 rounded-md cursor-pointer flex items-center gap-3 transition-colors"
-                    onClick={async () => {
-                      const { data } = await supabase
-                        .from(result.type === 'movie' ? 'movies' : 'actors')
-                        .select('slug')
-                        .eq('id', result.id)
-                        .single()
-                      
-                      if (data?.slug) {
-                        router.push(`/${result.type}s/${data.slug}`)
+                    onClick={() => {
+                      if (result.slug) {
+                        router.push(`/${result.type}s/${result.slug}`)
                       }
                     }}
                   >
