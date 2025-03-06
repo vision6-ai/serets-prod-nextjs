@@ -159,7 +159,9 @@ async function getMovieData(slug: string, locale: Locale) {
   const cast = await Promise.all((castRes.data || []).map(async (castMember) => {
     if (!castMember.actors) return null
 
-    const actorData = castMember.actors as Actor
+    const actorData = Array.isArray(castMember.actors) 
+      ? castMember.actors[0] as unknown as Actor 
+      : castMember.actors as Actor
 
     const actorTranslations = await getActorTranslations(
       supabase,
@@ -186,7 +188,9 @@ async function getMovieData(slug: string, locale: Locale) {
   const genres = (genresRes.data || []).map((genreData) => {
     if (!genreData.genres) return null
 
-    const genreInfo = genreData.genres as Genre
+    const genreInfo = Array.isArray(genreData.genres)
+      ? genreData.genres[0] as unknown as Genre
+      : genreData.genres as Genre
 
     // Extract genre translation for current locale
     const genreTranslation = genreInfo.translations && 
@@ -208,7 +212,9 @@ async function getMovieData(slug: string, locale: Locale) {
   const awards = (awardsRes.data || []).map((award) => {
     if (!award.awards) return null
 
-    const awardInfo = award.awards as Award
+    const awardInfo = Array.isArray(award.awards)
+      ? award.awards[0] as unknown as Award
+      : award.awards as Award
 
     return {
       id: award.id,
@@ -228,9 +234,27 @@ async function getMovieData(slug: string, locale: Locale) {
   return {
     movie: movieWithTranslations,
     videos: videosRes.data || [],
-    cast: cast.filter(Boolean),
-    genres,
-    awards,
+    cast: cast.filter(Boolean).map(item => ({
+      id: item!.id,
+      name: item!.actor.name,
+      hebrew_name: null, // We don't have this field yet
+      slug: item!.actor.slug,
+      photo_url: item!.actor.photo_url,
+      role: item!.role
+    })),
+    genres: genres.filter(Boolean).map(item => ({
+      id: item!.id,
+      name: item!.genre.name,
+      hebrew_name: null, // We don't have this field yet
+      slug: item!.genre.slug
+    })),
+    awards: awards.filter(Boolean).map(item => ({
+      id: item!.id,
+      name: item!.award.name,
+      category: item!.category,
+      year: Number(item!.year),
+      is_winner: Boolean(item!.is_winner)
+    })),
     similarMovies
   }
 }

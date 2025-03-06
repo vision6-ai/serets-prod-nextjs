@@ -4,6 +4,7 @@ import { useAuth } from '@/components/auth/auth-provider'
 import { MovieActions } from './movie-actions'
 import { MovieSlider } from './movie-slider'
 import type { Movie } from '@/types/movie'
+import { Locale } from '@/config/i18n'
 
 interface MovieContentProps {
   movie: Movie & {
@@ -176,7 +177,7 @@ export function MovieContent({
       {similarMovies.length > 0 && (
         <section>
           <h2 className="text-2xl font-semibold mb-6">Similar Movies</h2>
-          <MovieSlider movies={similarMovies} locale={locale} />
+          <MovieSlider movies={similarMovies} locale={locale as Locale} />
         </section>
       )}
     </div>
