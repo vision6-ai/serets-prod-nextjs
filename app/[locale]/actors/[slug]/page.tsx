@@ -1,12 +1,14 @@
-import Image from 'next/image'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
-import { Link } from '@/app/i18n'
-import { getActorTranslations, getMovieTranslations } from '@/lib/translations'
+import { ActorContent } from '@/components/actors/actor-content'
+import { getMovieTranslations, getActorTranslations } from '@/lib/translations'
 import { Database } from '@/types/supabase-types'
 import { Locale } from '@/config/i18n'
 import { unstable_setRequestLocale } from 'next-intl/server'
 
+export const revalidate = 3600
+
+// Define types for the data structure
 interface Actor {
   id: string
   name: string
@@ -14,6 +16,8 @@ interface Actor {
   bio: string | null
   photo_url: string | null
   slug: string
+  birth_date?: string | null
+  birth_place?: string | null
 }
 
 interface MovieData {
@@ -27,174 +31,151 @@ interface MovieData {
   synopsis?: string | null
 }
 
+interface MovieTranslation {
+  title: string;
+  synopsis: string | null;
+  poster_url: string | null;
+  trailer_url: string | null;
+  language_code: string;
+}
+
 interface MovieActorJoin {
   role: string
-  movies: MovieData
+  movie_id: string
 }
 
 interface MovieWithRole extends MovieData {
   role: string
 }
 
-export const revalidate = 3600
-
 async function getActorData(slug: string, locale: Locale) {
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
-
-  // Get the actor from the base table
-  const { data: actorData } = await supabase
+  
+  // Get actor with translations
+  const { data: actorData, error: actorError } = await supabase
     .from('actors')
-    .select('*')
+    .select(`
+      id,
+      slug,
+      birth_date,
+      birth_place,
+      photo_url,
+      translations:actor_translations!inner(
+        name,
+        biography,
+        language_code
+      )
+    `)
     .eq('slug', slug)
+    .eq('translations.language_code', locale)
     .single()
 
-  if (!actorData) {
+  if (actorError || !actorData) {
+    console.error('Error fetching actor:', actorError)
     return null
   }
 
-  // Get actor translations
-  const actorTranslations = await getActorTranslations(
-    supabase,
-    actorData.id,
-    locale
-  )
+  // Extract translation data
+  const translation = actorData.translations && actorData.translations.length > 0 
+    ? actorData.translations[0]
+    : null
 
   // Combine actor data with translations
   const actor = {
-    ...actorData,
-    name: actorTranslations.name || actorData.name,
-    hebrew_name: locale === 'he' ? actorTranslations.name : actorData.hebrew_name,
-    bio: actorTranslations.biography || actorData.biography
+    id: actorData.id,
+    slug: actorData.slug,
+    name: translation?.name || actorData.slug,
+    hebrew_name: translation?.name || actorData.slug, // Using same name as fallback
+    bio: translation?.biography || null,
+    photo_url: actorData.photo_url,
+    birth_date: actorData.birth_date,
+    birth_place: actorData.birth_place
   }
 
-  // Get movies the actor has appeared in
-  const { data: movieActors } = await supabase
+  // Get movies this actor has been in
+  const { data: movieActors, error: movieActorsError } = await supabase
     .from('movie_actors')
     .select(`
       role,
-      movies (
-        id,
-        title,
-        hebrew_title,
-        release_date,
-        poster_url,
-        rating,
-        slug
-      )
+      movie_id
     `)
     .eq('actor_id', actor.id)
 
-  const typedMovieActors = (movieActors || []) as unknown as { 
-    role: string; 
-    movies: MovieData;
-  }[]
-
-  // Get translations for each movie
-  const moviesWithTranslations = await Promise.all(
-    typedMovieActors.map(async (m) => {
-      const translations = await getMovieTranslations(
-        supabase,
-        m.movies.id,
-        locale
-      )
-      
-      return {
-        ...m.movies,
-        title: translations.title || m.movies.title,
-        hebrew_title: locale === 'he' ? translations.title : m.movies.hebrew_title,
-        synopsis: translations.synopsis || m.movies.synopsis,
-        role: m.role
-      }
-    })
-  )
-
-  return {
-    actor: actor as Actor,
-    movies: moviesWithTranslations
+  if (movieActorsError) {
+    console.error('Error fetching movie actors:', movieActorsError)
+    return { actor, movies: [] }
   }
+
+  // Get the actual movies with translations
+  const movieIds = movieActors?.map(ma => ma.movie_id) || []
+  
+  if (movieIds.length === 0) {
+    return { actor, movies: [] }
+  }
+
+  const { data: moviesData, error: moviesError } = await supabase
+    .from('movies')
+    .select(`
+      id,
+      slug,
+      release_date,
+      rating,
+      translations:movie_translations!inner(
+        title,
+        synopsis,
+        poster_url,
+        language_code
+      )
+    `)
+    .in('id', movieIds)
+    .eq('translations.language_code', locale)
+
+  if (moviesError) {
+    console.error('Error fetching movies:', moviesError)
+    return { actor, movies: [] }
+  }
+
+  // Create a map of movie IDs to roles
+  const movieRoles: Record<string, string> = {}
+  movieActors?.forEach(ma => {
+    movieRoles[ma.movie_id] = ma.role
+  })
+
+  // Transform the movies data and add roles
+  const movies = moviesData?.map(movie => {
+    // Get the translation for the current locale
+    const translation = movie.translations && movie.translations.length > 0 
+      ? movie.translations[0] as MovieTranslation
+      : null
+    
+    return {
+      id: movie.id,
+      title: translation?.title || movie.slug,
+      hebrew_title: translation?.title || movie.slug, // Using same title as fallback
+      synopsis: translation?.synopsis || null,
+      release_date: movie.release_date,
+      rating: movie.rating,
+      poster_url: translation?.poster_url || null,
+      slug: movie.slug,
+      role: movieRoles[movie.id] || 'Actor'
+    }
+  }) || []
+
+  return { actor, movies }
 }
 
 export default async function ActorPage({ params }: { params: { slug: string; locale: Locale } }) {
+  // This is critical for server components to work with next-intl
   unstable_setRequestLocale(params.locale)
   
   const data = await getActorData(params.slug, params.locale)
 
   if (!data) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-4xl font-bold mb-4">Actor Not Found</h1>
-        <p className="text-muted-foreground">
-          The actor you&apos;re looking for doesn&apos;t exist or has been removed.
-        </p>
-      </div>
-    )
+    notFound()
   }
 
-  const { actor, movies } = data
-
-  return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="max-w-4xl mx-auto">
-        {actor.photo_url && (
-          <Image
-            src={actor.photo_url}
-            alt={actor.name}
-            className="w-64 h-64 rounded-full mx-auto mb-6 object-cover"
-            width={256}
-            height={256}
-          />
-        )}
-        <h1 className="text-4xl font-bold text-center mb-2">{actor.name}</h1>
-        {actor.hebrew_name && (
-          <h2 className="text-2xl text-muted-foreground text-center mb-8">
-            {actor.hebrew_name}
-          </h2>
-        )}
-        
-        {actor.bio && (
-          <div className="mb-12">
-            <h3 className="text-2xl font-semibold mb-4">Biography</h3>
-            <p className="text-lg leading-relaxed">{actor.bio}</p>
-          </div>
-        )}
-
-        {movies.length > 0 && (
-          <div>
-            <h3 className="text-2xl font-semibold mb-6">Filmography</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {movies.map((movie) => (
-                <div key={movie.id} className="group">
-                  <Link href={`/movies/${movie.slug}`} locale={params.locale} className="block">
-                    {movie.poster_url ? (
-                      <Image
-                        src={movie.poster_url}
-                        alt={movie.title}
-                        width={300}
-                        height={450}
-                        className="rounded-lg shadow-md transition-transform duration-200 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="aspect-[2/3] bg-muted rounded-lg flex items-center justify-center">
-                        {movie.title}
-                      </div>
-                    )}
-                    <h4 className="mt-2 font-medium group-hover:text-primary transition-colors">
-                      {movie.title}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {movie.role}
-                      {movie.release_date && ` • ${new Date(movie.release_date).getFullYear()}`}
-                    </p>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+  return <ActorContent actor={data.actor} movies={data.movies} locale={params.locale} />
 }

@@ -26,21 +26,35 @@ import useSWR from 'swr'
 import { Genre, Theater } from '@/types/shared'
 
 // Fetch functions
-const fetchCategories = async () => {
+const fetchCategories = async (): Promise<Genre[]> => {
   try {
     const client = createClientComponentClient()
     const { data, error } = await client
       .from('genres')
-      .select('id, name, slug, hebrew_name')
-      .order('name')
+      .select(`
+        id, 
+        slug,
+        translations:genre_translations(name)
+      `)
+      .eq('translations.language_code', 'en')
+      .order('slug')
     
     if (error) {
       console.error('Error fetching categories:', error.message)
       return []
     }
     
-    console.log('Fetched categories:', data)
-    return data || []
+    // Transform the data to match the expected format
+    const transformedData = data?.map(genre => ({
+      id: genre.id,
+      slug: genre.slug,
+      name: genre.translations && genre.translations.length > 0 
+        ? genre.translations[0].name 
+        : genre.slug // Fallback to slug if no translation
+    })) as Genre[] || []
+    
+    console.log('Fetched categories:', transformedData)
+    return transformedData
   } catch (error) {
     console.error('Exception fetching categories:', error)
     return []

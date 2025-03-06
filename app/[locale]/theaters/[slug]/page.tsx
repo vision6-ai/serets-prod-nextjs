@@ -9,8 +9,10 @@ export const revalidate = 3600
 interface MovieGenre {
   genres: {
     id: string
-    name: string
     slug: string
+    translations: {
+      name: string
+    }[]
   }
 }
 
@@ -18,7 +20,7 @@ interface MovieWithGenres extends Movie {
   genres?: { name: string; slug: string }[]
 }
 
-async function getTheaterData(slug: string) {
+async function getTheaterData(slug: string, locale: string = 'en') {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -66,7 +68,7 @@ async function getTheaterData(slug: string) {
     .gte('end_date', new Date().toISOString())
     .order('start_date', { ascending: false })
 
-  // Get movie genres
+  // Get movie genres - Updated to use genres and genre_translations tables directly
   const movieIds = theaterMovies?.map(tm => tm.movie_id) || []
   const { data: movieGenres } = await supabase
     .from('movie_genres')
@@ -74,11 +76,14 @@ async function getTheaterData(slug: string) {
       movie_id,
       genres (
         id,
-        name,
-        slug
+        slug,
+        translations:genre_translations (
+          name
+        )
       )
     `)
     .in('movie_id', movieIds)
+    .eq('genres.translations.language_code', locale)
 
   // Create a map of movie IDs to their genres
   const genresByMovie: Record<string, { name: string; slug: string }[]> = {}
@@ -88,8 +93,14 @@ async function getTheaterData(slug: string) {
     }
     // Ensure genres is properly typed and accessed
     if (mg.genres && typeof mg.genres === 'object') {
+      // Get the name from translations array (first item or fallback)
+      const genreName = mg.genres.translations && 
+                        mg.genres.translations.length > 0 ? 
+                        mg.genres.translations[0].name : 
+                        mg.genres.slug; // Fallback to slug if no translation
+      
       genresByMovie[mg.movie_id].push({
-        name: mg.genres.name,
+        name: genreName,
         slug: mg.genres.slug
       })
     }
@@ -137,7 +148,7 @@ export default async function TheaterPage({ params }: { params: { slug: string; 
   // This is critical for server components to work with next-intl
   unstable_setRequestLocale(params.locale)
   
-  const data = await getTheaterData(params.slug)
+  const data = await getTheaterData(params.slug, params.locale)
 
   if (!data) {
     notFound()

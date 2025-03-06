@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { Link } from '@/app/i18n'
 import Image from 'next/image'
-import { useLocale } from 'next-intl'
-import { getActorTranslations } from '@/lib/translations'
-import { Database } from '@/types/supabase-types'
 import { Locale } from '@/config/i18n'
 import { unstable_setRequestLocale } from 'next-intl/server'
 
@@ -15,42 +12,61 @@ interface Actor {
   slug: string
 }
 
+interface ActorTranslation {
+  name: string;
+  biography: string | null;
+  language_code: string;
+}
+
 export const revalidate = 3600
 
 async function getActors(locale: Locale) {
-  const supabase = createClient<Database>(
+  const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  // Get all actors from the base table
-  const { data: actorsData } = await supabase
+  // Get actors with translations for the current locale
+  const { data: actorsData, error } = await supabase
     .from('actors')
-    .select('*')
-    .order('name')
+    .select(`
+      id,
+      slug,
+      photo_url,
+      translations:actor_translations(
+        name,
+        language_code
+      )
+    `)
+    .eq('translations.language_code', locale)
+    .order('slug')
+
+  if (error) {
+    console.error('Error fetching actors:', error)
+    return []
+  }
 
   if (!actorsData || actorsData.length === 0) {
     return []
   }
 
-  // Get translations for each actor
-  const actorsWithTranslations = await Promise.all(
-    actorsData.map(async (actor) => {
-      const translations = await getActorTranslations(
-        supabase,
-        actor.id,
-        locale
-      )
-      
-      return {
-        ...actor,
-        name: translations.name || actor.name,
-        hebrew_name: locale === 'he' ? translations.name : actor.hebrew_name
-      }
-    })
-  )
+  // Transform the data to match the expected format
+  const actors = actorsData.map(actor => {
+    // Get the translation for the current locale
+    const translation = actor.translations && actor.translations.length > 0 
+      ? actor.translations[0] as ActorTranslation
+      : null;
+    
+    return {
+      id: actor.id,
+      name: translation?.name || actor.slug,
+      hebrew_name: locale === 'he' ? translation?.name : null,
+      photo_url: actor.photo_url,
+      slug: actor.slug
+    }
+  })
 
-  return actorsWithTranslations as Actor[]
+  return actors as Actor[]
 }
 
 export default async function ActorsPage({ params }: { params: { locale: Locale } }) {
@@ -82,7 +98,7 @@ export default async function ActorsPage({ params }: { params: { locale: Locale 
             <h2 className="font-medium group-hover:text-primary transition-colors">
               {actor.name}
             </h2>
-            {actor.hebrew_name && (
+            {actor.hebrew_name && actor.hebrew_name !== actor.name && (
               <p className="text-sm text-muted-foreground">
                 {actor.hebrew_name}
               </p>

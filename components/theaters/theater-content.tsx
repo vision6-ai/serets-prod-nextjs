@@ -237,7 +237,7 @@ export function TheaterContent({ theater, currentMovies, pastMovies }: TheaterCo
                     {theaterMovie.movies.poster_url ? (
                       <Image
                         src={theaterMovie.movies.poster_url}
-                        alt={theaterMovie.movies.title}
+                        alt={theaterMovie.movies.title || theaterMovie.movies.slug}
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
@@ -245,13 +245,13 @@ export function TheaterContent({ theater, currentMovies, pastMovies }: TheaterCo
                     ) : (
                       <div className="absolute inset-0 bg-muted flex items-center justify-center p-2 text-center">
                         <span className="text-muted-foreground text-sm">
-                          {theaterMovie.movies.title}
+                          {theaterMovie.movies.title || theaterMovie.movies.slug}
                         </span>
                       </div>
                     )}
                   </div>
                   <h3 className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                    {theaterMovie.movies.title}
+                    {theaterMovie.movies.title || theaterMovie.movies.slug}
                   </h3>
                 </Link>
               ))}

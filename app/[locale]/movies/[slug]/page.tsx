@@ -1,12 +1,47 @@
 import { MovieContent } from '@/components/movies/movie-content'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
-import { getMovieTranslations, getActorTranslations, getGenreTranslations } from '@/lib/translations'
+import { getActorTranslations, getGenreTranslations } from '@/lib/translations'
 import { Database } from '@/types/supabase-types'
 import { Locale } from '@/config/i18n'
 import { unstable_setRequestLocale } from 'next-intl/server'
+import type { Movie } from '@/types/movie'
 
 export const revalidate = 3600
+
+// Define types for the data structure
+interface MovieTranslation {
+  title: string;
+  synopsis: string | null;
+  poster_url: string | null;
+  trailer_url: string | null;
+  language_code: string;
+}
+
+interface GenreTranslation {
+  name: string;
+  language_code: string;
+}
+
+interface Actor {
+  id: string;
+  slug: string;
+  birth_date: string | null;
+  birth_place: string | null;
+  photo_url: string | null;
+}
+
+interface Genre {
+  id: string;
+  slug: string;
+  translations: GenreTranslation[];
+}
+
+interface Award {
+  id: string;
+  name: string;
+  hebrew_name: string | null;
+}
 
 async function getMovieData(slug: string, locale: Locale) {
   const supabase = createClient<Database>(
@@ -14,33 +49,55 @@ async function getMovieData(slug: string, locale: Locale) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
   
-  // Get the movie from the base table
-  const movieResult = await supabase
+  // Get the movie with its translations
+  const { data: movie, error: movieError } = await supabase
     .from('movies')
-    .select('*')
+    .select(`
+      id,
+      slug,
+      release_date,
+      duration,
+      rating,
+      translations:movie_translations!inner(
+        title,
+        synopsis,
+        poster_url,
+        trailer_url,
+        language_code
+      )
+    `)
     .eq('slug', slug)
+    .eq('translations.language_code', locale)
     .single()
 
-  if (!movieResult.data) {
+  if (movieError || !movie) {
+    console.error('Error fetching movie:', movieError)
     return null
   }
 
-  const movie = movieResult.data
-
-  // Get movie translations
-  const movieTranslations = await getMovieTranslations(
-    supabase,
-    movie.id,
-    locale
-  )
+  // Extract translation data
+  const translation = movie.translations && movie.translations.length > 0 
+    ? movie.translations[0] as MovieTranslation
+    : null
 
   // Combine movie data with translations
   const movieWithTranslations = {
-    ...movie,
-    title: movieTranslations.title || movie.title,
-    hebrew_title: locale === 'he' ? movieTranslations.title : movie.hebrew_title,
-    synopsis: movieTranslations.synopsis || movie.synopsis
-  }
+    id: movie.id,
+    slug: movie.slug,
+    release_date: movie.release_date,
+    duration: movie.duration,
+    rating: movie.rating,
+    title: translation?.title || movie.slug,
+    hebrew_title: translation?.title || movie.slug, // Using same title as fallback
+    synopsis: translation?.synopsis || null,
+    poster_url: translation?.poster_url || null,
+    backdrop_url: null, // Required by MovieContent but not in our data
+    trailer_url: translation?.trailer_url || null
+  } as Movie & {
+    poster_url: string | null;
+    backdrop_url: string | null;
+    trailer_url: string | null;
+  };
 
   const [videosRes, castRes, genresRes, awardsRes] = await Promise.all([
     supabase
@@ -51,129 +108,135 @@ async function getMovieData(slug: string, locale: Locale) {
     supabase
       .from('movie_actors')
       .select(`
+        movie_id,
         actor_id,
         role,
-        actors!inner (id, slug, birth_date, birth_place, photo_url)
+        actors (
+          id,
+          slug,
+          birth_date,
+          birth_place,
+          photo_url
+        )
       `)
       .eq('movie_id', movie.id),
     
     supabase
       .from('movie_genres')
       .select(`
-        genres!inner (id, slug)
+        id,
+        genre_id,
+        genres (
+          id,
+          slug,
+          translations:genre_translations(
+            name,
+            language_code
+          )
+        )
       `)
       .eq('movie_id', movie.id),
     
     supabase
       .from('movie_awards')
       .select(`
-        award_id,
+        id,
         year,
+        award_id,
+        category,
         is_winner,
-        awards!inner (id, category, year)
+        awards (
+          id,
+          name,
+          hebrew_name
+        )
       `)
       .eq('movie_id', movie.id)
+      .order('year', { ascending: false })
   ])
 
-  // Get translations for actors, genres, and awards
-  const castWithTranslations = await Promise.all(
-    (castRes.data || []).map(async (c: any) => {
-      const translations = await getActorTranslations(
-        supabase,
-        c.actor_id,
-        locale
-      )
-      
-      return {
-        id: c.actor_id,
-        name: translations.name || '',
-        hebrew_name: locale === 'en' ? translations.name : null,
-        slug: c.actors.slug,
-        photo_url: c.actors.photo_url,
-        role: c.role
+  // Process cast data
+  const cast = await Promise.all((castRes.data || []).map(async (castMember) => {
+    if (!castMember.actors) return null
+
+    const actorData = castMember.actors as Actor
+
+    const actorTranslations = await getActorTranslations(
+      supabase,
+      castMember.actor_id,
+      locale
+    )
+
+    return {
+      id: castMember.actor_id, // Use actor_id as the id
+      role: castMember.role,
+      character_name: null, // This field doesn't exist in movie_actors
+      actor: {
+        id: actorData.id,
+        name: actorTranslations.name || '',
+        slug: actorData.slug,
+        birth_date: actorData.birth_date,
+        birth_place: actorData.birth_place,
+        photo_url: actorData.photo_url
       }
-    })
-  )
+    }
+  }))
 
-  const genresWithTranslations = await Promise.all(
-    (genresRes.data || []).map(async (g: any) => {
-      const translations = await getGenreTranslations(
-        supabase,
-        g.genres.id,
-        locale
-      )
-      
-      return {
-        id: g.genres.id,
-        name: translations.name || '',
-        hebrew_name: locale === 'en' ? translations.name : null,
-        slug: g.genres.slug
+  // Process genres data
+  const genres = (genresRes.data || []).map((genreData) => {
+    if (!genreData.genres) return null
+
+    const genreInfo = genreData.genres as Genre
+
+    // Extract genre translation for current locale
+    const genreTranslation = genreInfo.translations && 
+                            genreInfo.translations.length > 0 ? 
+                            genreInfo.translations.find((t: GenreTranslation) => t.language_code === locale) : 
+                            null
+
+    return {
+      id: genreData.id,
+      genre: {
+        id: genreInfo.id,
+        name: genreTranslation?.name || genreInfo.slug,
+        slug: genreInfo.slug
       }
-    })
-  )
+    }
+  }).filter(Boolean)
 
-  // Get genre IDs for similar movies query
-  const genreIds = (genresRes.data || []).map((g: any) => g.genres.id)
+  // Process awards data
+  const awards = (awardsRes.data || []).map((award) => {
+    if (!award.awards) return null
 
-  // Get similar movies using direct table queries
-  const { data: similarMoviesData } = await supabase
-    .from('movie_genres')
-    .select('movie_id')
-    .in('genre_id', genreIds)
-    .neq('movie_id', movie.id)
-    .order('movie_id', { ascending: false })
-    .limit(6)
+    const awardInfo = award.awards as Award
 
-  // Get the actual movie data for similar movies
-  const similarMovieIds = (similarMoviesData || []).map(item => item.movie_id)
-  
-  const { data: similarMoviesRaw } = await supabase
-    .from('movies')
-    .select('*')
-    .in('id', similarMovieIds)
-  
-  // Get translations for similar movies
-  const similarMoviesWithTranslations = await Promise.all(
-    (similarMoviesRaw || []).map(async (m) => {
-      const translations = await getMovieTranslations(
-        supabase,
-        m.id,
-        locale
-      )
-      
-      return {
-        ...m,
-        title: translations.title || m.title,
-        hebrew_title: locale === 'he' ? translations.title : m.hebrew_title,
-        synopsis: translations.synopsis || m.synopsis
+    return {
+      id: award.id,
+      year: award.year,
+      category: award.category,
+      is_winner: award.is_winner,
+      award: {
+        id: awardInfo.id,
+        name: locale === 'he' && awardInfo.hebrew_name ? awardInfo.hebrew_name : awardInfo.name
       }
-    })
-  )
+    }
+  }).filter(Boolean)
 
-  // Remove duplicates
-  const uniqueSimilarMovies = Array.from(
-    new Map(
-      similarMoviesWithTranslations.map(item => [item.id, item])
-    ).values()
-  ).slice(0, 6)
+  // For now, we don't have similar movies
+  const similarMovies: Movie[] = [];
 
   return {
     movie: movieWithTranslations,
     videos: videosRes.data || [],
-    cast: castWithTranslations,
-    genres: genresWithTranslations,
-    awards: awardsRes.data?.map((a: any) => ({
-      id: a.awards.id,
-      name: a.awards.name || '',
-      category: a.awards.category,
-      year: a.year,
-      is_winner: a.is_winner
-    })) || [],
-    similarMovies: uniqueSimilarMovies
+    cast: cast.filter(Boolean),
+    genres,
+    awards,
+    similarMovies
   }
 }
 
 export default async function MoviePage({ params }: { params: { slug: string, locale: Locale } }) {
+  // This is critical for server components to work with next-intl
   unstable_setRequestLocale(params.locale)
   
   const data = await getMovieData(params.slug, params.locale)
@@ -182,5 +245,14 @@ export default async function MoviePage({ params }: { params: { slug: string, lo
     notFound()
   }
 
-  return <MovieContent {...data} locale={params.locale} />
+  // Pass all props directly to MovieContent
+  return <MovieContent 
+    movie={data.movie} 
+    videos={data.videos} 
+    cast={data.cast} 
+    genres={data.genres} 
+    awards={data.awards}
+    similarMovies={data.similarMovies}
+    locale={params.locale} 
+  />
 }

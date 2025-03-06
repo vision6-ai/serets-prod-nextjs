@@ -169,9 +169,9 @@ export default function VideoPlayer({ trailer, isActive, className }: VideoPlaye
         {/* Movie Info */}
         <div>
           <h2 className="text-white font-semibold text-lg">
-            {trailer.movies.title}
+            {trailer.movies.title || trailer.movies.slug}
           </h2>
-          {trailer.movies.hebrew_title && (
+          {trailer.movies.hebrew_title && trailer.movies.hebrew_title !== trailer.movies.title && (
             <p className="text-white/80 text-sm">
               {trailer.movies.hebrew_title}
             </p>

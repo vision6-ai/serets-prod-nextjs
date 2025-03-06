@@ -19,7 +19,15 @@ interface Genre {
   slug: string
 }
 
-async function getMoviesData() {
+interface MovieTranslation {
+  title: string;
+  synopsis: string | null;
+  poster_url: string | null;
+  trailer_url: string | null;
+  language_code: string;
+}
+
+async function getMoviesData(locale: string = 'en') {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -27,107 +35,159 @@ async function getMoviesData() {
   const now = new Date().toISOString()
 
   try {
-    // Fetch genres first
-    const { data: genres, error: genresError } = await supabase
+    // Fetch genres with translations
+    const { data: genresData, error: genresError } = await supabase
       .from('genres')
-      .select('*')
-      .order('name')
+      .select(`
+        id, 
+        slug,
+        translations:genre_translations(name)
+      `)
+      .eq('translations.language_code', locale)
+      .order('slug')
 
     if (genresError) {
       console.error('Error fetching genres:', genresError)
-      return { latest: [], topRated: [], genreMovies: {} }
+      return { latest: [], topRated: [], genres: [], genreMovies: {} }
     }
+
+    // Transform genres data
+    const genres = genresData?.map(genre => ({
+      id: genre.id,
+      slug: genre.slug,
+      name: genre.translations && genre.translations.length > 0 
+        ? genre.translations[0].name 
+        : genre.slug // Fallback to slug if no translation
+    })) || []
 
     // Fetch latest and top rated in parallel
     const [latestRes, topRatedRes] = await Promise.all([
       // Latest releases (last 6 months)
       supabase
         .from('movies')
-        .select('id, title, hebrew_title, release_date, poster_url, rating, slug')
+        .select(`
+          id,
+          slug,
+          release_date,
+          rating,
+          translations:movie_translations!inner(
+            title,
+            poster_url,
+            language_code
+          )
+        `)
         .lt('release_date', now)
         .gt('release_date', new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString())
+        .eq('translations.language_code', locale)
         .order('release_date', { ascending: false })
         .limit(10),
 
       // Top rated movies
       supabase
         .from('movies')
-        .select('id, title, hebrew_title, release_date, poster_url, rating, slug')
+        .select(`
+          id,
+          slug,
+          release_date,
+          rating,
+          translations:movie_translations!inner(
+            title,
+            poster_url,
+            language_code
+          )
+        `)
         .lt('release_date', now)
+        .gt('rating', 7)
+        .eq('translations.language_code', locale)
         .order('rating', { ascending: false })
         .limit(10)
     ])
 
-    // Fetch movies for each genre
-    const genreMovies: { [key: string]: { name: string, movies: Movie[] } } = {}
+    // Transform movie data
+    const transformMovieData = (movieData: any) => {
+      const translation = movieData.translations && movieData.translations.length > 0 
+        ? movieData.translations[0] as MovieTranslation
+        : null;
+      
+      return {
+        id: movieData.id,
+        title: translation?.title || movieData.slug,
+        hebrew_title: translation?.title || movieData.slug, // Using same title as fallback
+        release_date: movieData.release_date,
+        poster_url: translation?.poster_url || null,
+        rating: movieData.rating,
+        slug: movieData.slug,
+      }
+    }
+
+    const latest = (latestRes.data || []).map(transformMovieData)
+    const topRated = (topRatedRes.data || []).map(transformMovieData)
+
+    // Get movies for each genre (limit to 5 genres to avoid too many queries)
+    const genreMovies: Record<string, Movie[]> = {}
     
-    await Promise.all(genres.map(async (genre) => {
-      const { data: movieIds } = await supabase
+    for (const genre of genres.slice(0, 5)) {
+      // Get movie IDs for this genre
+      const { data: movieGenres } = await supabase
         .from('movie_genres')
         .select('movie_id')
         .eq('genre_id', genre.id)
         .limit(10)
-
-      if (movieIds && movieIds.length > 0) {
-        const { data: movies } = await supabase
+      
+      if (movieGenres && movieGenres.length > 0) {
+        const movieIds = movieGenres.map(mg => mg.movie_id)
+        
+        // Get the actual movies
+        const { data: genreMoviesData } = await supabase
           .from('movies')
-          .select('id, title, hebrew_title, release_date, poster_url, rating, slug')
-          .in('id', movieIds.map(m => m.movie_id))
-          .lt('release_date', now)
+          .select(`
+            id,
+            slug,
+            release_date,
+            rating,
+            translations:movie_translations!inner(
+              title,
+              poster_url,
+              language_code
+            )
+          `)
+          .in('id', movieIds)
+          .eq('translations.language_code', locale)
           .order('release_date', { ascending: false })
-
-        if (movies && movies.length > 0) {
-          genreMovies[genre.slug] = {
-            name: genre.name,
-            movies: movies
-          }
-        }
+          .limit(10)
+        
+        genreMovies[genre.id] = (genreMoviesData || []).map(transformMovieData)
+      } else {
+        genreMovies[genre.id] = []
       }
-    }))
-
-    return {
-      latest: latestRes.data || [],
-      topRated: topRatedRes.data || [],
-      genreMovies
     }
+
+    return { latest, topRated, genres, genreMovies }
   } catch (error) {
-    console.error('Error fetching movies:', error)
-    return { latest: [], topRated: [], genreMovies: {} }
+    console.error('Error fetching movies data:', error)
+    return { latest: [], topRated: [], genres: [], genreMovies: {} }
   }
 }
 
 export async function MovieSections({ locale }: { locale: Locale }) {
-  const { latest, topRated, genreMovies } = await getMoviesData()
+  const { latest, topRated, genres, genreMovies } = await getMoviesData(locale)
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <MovieSlider
-        title="Latest Releases"
-        movies={latest}
-        loading={false}
-        viewAllHref="/movies/latest"
-        locale={locale}
-      />
+    <div className="space-y-12">
+      <MovieSlider title="Latest Releases" movies={latest} locale={locale} />
+      <MovieSlider title="Top Rated" movies={topRated} locale={locale} />
       
-      <MovieSlider
-        title="Top Rated"
-        movies={topRated}
-        loading={false}
-        viewAllHref="/movies/top-rated"
-        locale={locale}
-      />
-      
-      {/* Genre-based movie sliders */}
-      {Object.entries(genreMovies).map(([slug, { name, movies }]) => (
-        <MovieSlider
-          key={slug}
-          title={name}
-          movies={movies}
-          loading={false}
-          viewAllHref={`/genres/${slug}`}
-          locale={locale}
-        />
-      ))}
-    </Suspense>
+      {genres.map(genre => (
+        genreMovies[genre.id]?.length > 0 && (
+          <MovieSlider 
+            key={genre.id}
+            title={genre.name}
+            movies={genreMovies[genre.id] || []}
+            viewAllHref={`/genres/${genre.slug}`}
+            locale={locale}
+          />
+        )
+      )).slice(0, 5)}
+    </div>
   )
 }

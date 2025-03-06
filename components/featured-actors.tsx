@@ -16,11 +16,9 @@ interface Actor {
 }
 
 interface ActorTranslation {
-  id: string
-  actor_id: string
-  language_code: string
-  name: string
-  biography: string | null
+  name: string;
+  biography: string | null;
+  language_code: string;
 }
 
 export function FeaturedActors() {
@@ -32,75 +30,52 @@ export function FeaturedActors() {
   useEffect(() => {
     async function fetchActors() {
       try {
-        // Get actors from the base table
+        // Get actors with translations for the current locale
         const { data: actorsData, error } = await supabase
           .from('actors')
-          .select('*')
+          .select(`
+            id,
+            slug,
+            photo_url,
+            translations:actor_translations(
+              name,
+              language_code
+            )
+          `)
+          .eq('translations.language_code', locale)
           .limit(6)
           .order('created_at', { ascending: false })
         
-        if (error) throw error
-        
-        if (!actorsData || actorsData.length === 0) {
+        if (error) {
+          console.error('Error fetching actors:', error)
           setActors([])
+          setLoading(false)
           return
         }
         
-        // Get translations for each actor
-        const actorIds = actorsData.map(actor => actor.id)
-        
-        // Get translations for the current locale
-        const { data: currentLocaleTranslations } = await supabase
-          .from('actor_translations')
-          .select('*')
-          .in('actor_id', actorIds)
-          .eq('language_code', locale)
-        
-        // Create a map of translations by actor_id
-        const translationsByActorId: Record<string, ActorTranslation> = {}
-        
-        // Add current locale translations to the map
-        if (currentLocaleTranslations) {
-          for (const translation of currentLocaleTranslations) {
-            translationsByActorId[translation.actor_id] = translation as ActorTranslation
-          }
+        if (!actorsData || actorsData.length === 0) {
+          setActors([])
+          setLoading(false)
+          return
         }
         
-        // If we don't have translations for all actors in the current locale and it's not English,
-        // get English translations for the missing actors
-        if (locale !== 'en') {
-          const missingActorIds = actorIds.filter(id => !translationsByActorId[id])
-          
-          if (missingActorIds.length > 0) {
-            const { data: englishTranslations } = await supabase
-              .from('actor_translations')
-              .select('*')
-              .in('actor_id', missingActorIds)
-              .eq('language_code', 'en')
-            
-            // Add English translations to the map
-            if (englishTranslations) {
-              for (const translation of englishTranslations) {
-                if (!translationsByActorId[translation.actor_id]) {
-                  translationsByActorId[translation.actor_id] = translation as ActorTranslation
-                }
-              }
-            }
-          }
-        }
-        
-        // Combine actor data with translations
-        const actorsWithTranslations = actorsData.map(actor => {
-          const translation = translationsByActorId[actor.id]
+        // Transform the data to match the expected format
+        const transformedActors = actorsData.map(actor => {
+          // Get the translation for the current locale
+          const translation = actor.translations && actor.translations.length > 0 
+            ? actor.translations[0] as ActorTranslation
+            : null;
           
           return {
-            ...actor,
-            name: translation?.name || actor.name,
-            hebrew_name: locale === 'he' ? translation?.name : actor.hebrew_name
-          }
+            id: actor.id,
+            name: translation?.name || actor.slug,
+            hebrew_name: locale === 'he' ? translation?.name || null : null,
+            photo_url: actor.photo_url,
+            slug: actor.slug
+          } as Actor
         })
         
-        setActors(actorsWithTranslations)
+        setActors(transformedActors)
       } catch (error) {
         console.error('Error fetching actors:', error)
       } finally {
@@ -149,7 +124,7 @@ export function FeaturedActors() {
                   <h3 className="font-semibold text-center mb-1">
                     {actor.name}
                   </h3>
-                  {actor.hebrew_name && (
+                  {actor.hebrew_name && actor.hebrew_name !== actor.name && (
                     <h4 className="text-sm text-muted-foreground text-center">
                       {actor.hebrew_name}
                     </h4>

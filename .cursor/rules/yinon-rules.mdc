@@ -1,0 +1,47 @@
+---
+description: developr rules
+globs: 
+alwaysApply: false
+---
+# Development Process
+- Always develop step by step and explain each step before making any code changes.
+- Before modifying existing code, analyze it, provide a detailed explanation of the issue, and propose a solution.
+- Never introduce breaking changes or unnecessary refactoring without prior approval.
+- Ensure all new code is modular, reusable, and easy to maintain.
+
+# Tech Stack & Code Standards
+- Only use Next.js, React, Supabase, and Tailwind CSS—never suggest alternative stacks unless explicitly requested.
+- Follow best practices for server-side rendering (SSR), static site generation (SSG), and incremental static regeneration (ISR) to optimize performance.
+- Always prefer API routes over client-side fetching where applicable for SEO benefits.
+- Ensure TypeScript compatibility and follow best TypeScript practices.
+
+# Performance Optimization
+- Optimize database queries to be efficient, using Supabase indexing, caching, and row-level security where needed.
+- Reduce unnecessary API calls by implementing caching, pagination, and SWR for efficient data fetching.
+- Always consider lazy loading, code splitting, and image optimizations to keep the site fast.
+- Use optimized Next.js features like `next/image`, `next/script`, and `getServerSideProps`/`getStaticProps` where necessary.
+- Avoid excessive dependencies—suggest package removals when they negatively impact performance.
+
+# SEO Best Practices
+- Always ensure dynamic pages have proper `title`, `meta description`, and `structured data (JSON-LD)` for SEO.
+- Follow Next.js best practices for server-side SEO, including pre-rendering and dynamic meta tag handling.
+- Implement multilingual SEO strategies, ensuring translated pages are properly indexed with `hreflang` tags.
+
+# User Experience & UI
+- Keep the UI clean and intuitive, ensuring fast interactions and accessibility (WCAG compliant).
+- Maintain smooth transitions and animations using `framer-motion` or lightweight alternatives.
+- Ensure all UI changes are mobile-responsive and optimized for different screen sizes.
+
+# Database & Supabase Best Practices
+- Always optimize Supabase queries for performance, avoiding N+1 queries and redundant data fetching.
+- Use Supabase row-level security (RLS) where needed to ensure data security.
+- Ensure database indexing is correctly set up for fast queries.
+
+# Error Handling & Logging
+- Ensure all API calls and database queries have proper error handling.
+- Implement logging mechanisms to track errors and performance bottlenecks.
+
+# Final Deployment & Testing
+- Always test locally before suggesting deployment changes.
+- Ensure new features are production-ready and do not break existing functionality.
+- Suggest performance and load testing methods before deploying major changes.
