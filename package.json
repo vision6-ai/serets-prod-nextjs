@@ -15,8 +15,8 @@
     "build:analyze": "ANALYZE=true next build",
     "build:prod": "next build && next-bundle-analyzer",
     "prepare-prod": "npm prune --production && next build",
-    "postinstall": "npm install next@14.1.0 --no-save && echo 'Next.js installed'",
-    "vercel-build": "next build",
+    "postinstall": "npm install critters --no-save && echo 'Critters installed'",
+    "vercel-build": "npm install critters && next build",
     "lighthouse": "lighthouse http://localhost:3000 --view",
     "performance:audit": "node scripts/performance-audit.js"
   },
@@ -59,6 +59,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "cmdk": "^0.2.1",
+    "critters": "0.0.25",
     "date-fns": "^3.3.1",
     "embla-carousel-react": "8.5.2",
     "framer-motion": "12.4.7",
