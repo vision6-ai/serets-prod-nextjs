@@ -13,7 +13,6 @@ export interface Database {
         Row: {
           id: string
           name: string
-          hebrew_name: string | null
           bio: string | null
           photo_url: string | null
           tmdb_id: number | null
@@ -23,7 +22,6 @@ export interface Database {
         Insert: {
           id?: string
           name: string
-          hebrew_name?: string | null
           bio?: string | null
           photo_url?: string | null
           tmdb_id?: number | null
@@ -33,7 +31,6 @@ export interface Database {
         Update: {
           id?: string
           name?: string
-          hebrew_name?: string | null
           bio?: string | null
           photo_url?: string | null
           tmdb_id?: number | null
@@ -45,7 +42,6 @@ export interface Database {
         Row: {
           id: string
           name: string
-          hebrew_name: string | null
           slug: string
           created_at: string
           updated_at: string
@@ -53,7 +49,6 @@ export interface Database {
         Insert: {
           id?: string
           name: string
-          hebrew_name?: string | null
           slug: string
           created_at?: string
           updated_at?: string
@@ -61,7 +56,6 @@ export interface Database {
         Update: {
           id?: string
           name?: string
-          hebrew_name?: string | null
           slug?: string
           created_at?: string
           updated_at?: string
@@ -120,7 +114,6 @@ export interface Database {
         Row: {
           id: string
           title: string
-          hebrew_title: string | null
           description: string | null
           poster_url: string | null
           release_date: string | null
@@ -133,7 +126,6 @@ export interface Database {
         Insert: {
           id?: string
           title: string
-          hebrew_title?: string | null
           description?: string | null
           poster_url?: string | null
           release_date?: string | null
@@ -146,7 +138,6 @@ export interface Database {
         Update: {
           id?: string
           title?: string
-          hebrew_title?: string | null
           description?: string | null
           poster_url?: string | null
           release_date?: string | null

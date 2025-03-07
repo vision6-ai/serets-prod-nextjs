@@ -1,30 +1,35 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { PropsWithChildren } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NextIntlClientProvider } from 'next-intl'
-import { ThemeProvider } from '@/components/theme-provider'
-import { Toaster } from '@/components/ui/toaster'
 
-export function Providers({
-  locale,
-  messages,
-  children
-}: {
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
+      gcTime: 1000 * 60 * 30, // Keep data in cache for 30 minutes
+    },
+  },
+})
+
+interface ProvidersProps extends PropsWithChildren {
   locale: string
-  messages: any
-  children: ReactNode
-}) {
+  messages: Record<string, any>
+}
+
+export function Providers({ children, locale, messages }: ProvidersProps) {
   return (
     <NextIntlClientProvider 
       locale={locale} 
       messages={messages}
-      timeZone="Asia/Jerusalem"
+      // The timeZone is now handled by i18n.config.ts
       now={new Date()}
     >
-      <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
         {children}
-        <Toaster />
-      </ThemeProvider>
+      </QueryClientProvider>
     </NextIntlClientProvider>
   )
 }

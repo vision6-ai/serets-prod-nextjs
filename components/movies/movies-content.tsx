@@ -168,7 +168,7 @@ export function MoviesContent({ locale = 'en' }: MoviesContentProps) {
 
   return (
     <div className="space-y-8">
-      <MovieFilters onFilterChange={fetchMovies} />
+      <MovieFilters onFilterChange={fetchMovies} locale={locale} />
       <div className="min-h-[400px]">
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">

@@ -1,261 +1,246 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Check, ChevronDown } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { useTranslations } from 'next-intl'
+import { Filters } from 'hooks/use-infinite-movies'
+import { useCallback, useEffect, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { Button } from '@/components/ui/button'
+import { ChevronDown, Check } from 'lucide-react'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 interface Genre {
   id: string
   name: string
-  hebrew_name: string | null
 }
 
 interface MovieFiltersProps {
-  onFilterChange: (filters: {
-    genres: string[]
-    year?: number | null
-    rating?: number | null
-    sortBy: 'release_date' | 'rating' | 'title'
-    sortOrder: 'asc' | 'desc'
-  }) => void
+  onFilterChange: (filters: Filters) => void
+  locale: string
 }
 
-export function MovieFilters({ onFilterChange }: MovieFiltersProps) {
+export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
+  const t = useTranslations('movies')
   const [genres, setGenres] = useState<Genre[]>([])
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState<'release_date' | 'rating' | 'title'>('release_date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const supabase = createClientComponentClient()
 
-  // Fetch genres on component mount
+  // Check if any filters are active
+  const hasActiveFilters = selectedGenres.length > 0 || selectedYear !== null || selectedRating !== null
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSelectedGenres([])
+    setSelectedYear(null)
+    setSelectedRating(null)
+    setSortBy('release_date')
+    setSortOrder('desc')
+  }
+
+  // Fetch genres
   useEffect(() => {
-    async function fetchGenres() {
+    const fetchGenres = async () => {
+      const supabase = createClientComponentClient()
       const { data } = await supabase
-        .from('genres')
-        .select('*')
-        .order('name')
+        .from('genre_translations')
+        .select(`
+          genre_id,
+          name
+        `)
+        .eq('language_code', locale)
       
       if (data) {
-        setGenres(data)
+        setGenres(data.map(genre => ({
+          id: genre.genre_id,
+          name: genre.name
+        })))
       }
     }
 
     fetchGenres()
-  }, [supabase])
+  }, [locale])
 
-  // Debounced filter change handler
-  const debouncedFilterChange = useCallback(
-    (filters: {
-      genres: string[]
-      year?: number | null
-      rating?: number | null
-      sortBy: 'release_date' | 'rating' | 'title'
-      sortOrder: 'asc' | 'desc'
-    }) => {
-      onFilterChange(filters)
-    },
-    [onFilterChange]
-  )
-
-  // Update filters when any filter value changes
+  // Update filters when any selection changes
   useEffect(() => {
-    const filters = {
+    onFilterChange({
       genres: selectedGenres,
       year: selectedYear,
       rating: selectedRating,
       sortBy,
-      sortOrder
-    }
-    debouncedFilterChange(filters)
-  }, [selectedGenres, selectedYear, selectedRating, sortBy, sortOrder, debouncedFilterChange])
+      sortOrder,
+    })
+  }, [selectedGenres, selectedYear, selectedRating, sortBy, sortOrder, onFilterChange])
 
-  // Generate years from 1960 to current year
+  // Generate year options (from current year + 1 to 10 years back)
   const currentYear = new Date().getFullYear()
-  const years = Array.from(
-    { length: currentYear - 1960 + 1 },
-    (_, i) => currentYear - i
-  )
+  const years = Array.from({ length: 10 }, (_, i) => currentYear + 1 - i)
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {/* Genre Filter */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
-            Genres {selectedGenres.length > 0 && `(${selectedGenres.length})`}
-            <ChevronDown className="ml-2 h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Select Genres</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {genres.map((genre) => (
-            <DropdownMenuCheckboxItem
-              key={genre.id}
-              checked={selectedGenres.includes(genre.id)}
-              onCheckedChange={(checked) => {
-                if (checked) {
-                  setSelectedGenres([...selectedGenres, genre.id])
-                } else {
-                  setSelectedGenres(selectedGenres.filter(id => id !== genre.id))
-                }
-              }}
-            >
-              {genre.name}
-              {genre.hebrew_name && (
-                <span className="ml-2 text-muted-foreground">
-                  ({genre.hebrew_name})
-                </span>
-              )}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {/* Year Filter */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
-            Year {selectedYear && `(${selectedYear})`}
-            <ChevronDown className="ml-2 h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-[200px] max-h-[300px] overflow-y-auto">
-          <DropdownMenuLabel>Select Year</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            checked={selectedYear === null}
-            onCheckedChange={() => setSelectedYear(null)}
+    <div className="flex gap-4 mb-6">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="lg"
+            className="bg-background hover:bg-accent"
           >
-            All Years
-          </DropdownMenuCheckboxItem>
-          {years.map((year) => (
-            <DropdownMenuCheckboxItem
-              key={year}
-              checked={selectedYear === year}
-              onCheckedChange={(checked) => {
-                if (checked) {
-                  setSelectedYear(year)
-                } else {
-                  setSelectedYear(null)
-                }
-              }}
-            >
-              {year}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {/* Rating Filter */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
-            Rating {selectedRating && `(${selectedRating}+)`}
-            <ChevronDown className="ml-2 h-4 w-4" />
+            Genres
+            <ChevronDown className="h-4 w-4 ml-2" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuLabel>Minimum Rating</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            checked={selectedRating === null}
-            onCheckedChange={() => setSelectedRating(null)}
-          >
-            Any Rating
-          </DropdownMenuCheckboxItem>
-          {[9, 8, 7, 6, 5].map((rating) => (
-            <DropdownMenuCheckboxItem
-              key={rating}
-              checked={selectedRating === rating}
-              onCheckedChange={(checked) => {
-                if (checked) {
-                  setSelectedRating(rating)
-                } else {
-                  setSelectedRating(null)
-                }
-              }}
-            >
-              {rating}+ Stars
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </PopoverTrigger>
+        <PopoverContent className="w-80">
+          <div className="grid grid-cols-2 gap-2">
+            {genres.map((genre) => (
+              <Button
+                key={genre.id}
+                variant={selectedGenres.includes(genre.id) ? "default" : "outline"}
+                className="justify-start"
+                onClick={() => {
+                  setSelectedGenres((prev) =>
+                    prev.includes(genre.id)
+                      ? prev.filter((id) => id !== genre.id)
+                      : [...prev, genre.id]
+                  )
+                }}
+              >
+                {genre.name}
+              </Button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
 
-      {/* Sort Options */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="lg"
+            className="bg-background hover:bg-accent"
+          >
+            {selectedYear ? `Year (${selectedYear})` : 'Year'}
+            <ChevronDown className="h-4 w-4 ml-2" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48 p-0">
+          <div className="flex flex-col">
+            <div className="px-4 py-3 font-medium">Select Year</div>
+            <Button
+              variant="ghost"
+              className="justify-between rounded-none h-11 px-4 font-normal"
+              onClick={() => setSelectedYear(null)}
+            >
+              All Years
+              {!selectedYear && <Check className="h-4 w-4 ml-2" />}
+            </Button>
+            {years.map((year) => (
+              <Button
+                key={year}
+                variant="ghost"
+                className="justify-between rounded-none h-11 px-4 font-normal"
+                onClick={() => setSelectedYear(year)}
+              >
+                {year}
+                {selectedYear === year && <Check className="h-4 w-4 ml-2" />}
+              </Button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="lg"
+            className="bg-background hover:bg-accent"
+          >
+            Rating
+            <ChevronDown className="h-4 w-4 ml-2" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48">
+          <div className="flex flex-col gap-1">
+            <Button
+              variant={!selectedRating ? "default" : "outline"}
+              className="justify-start"
+              onClick={() => setSelectedRating(null)}
+            >
+              {t('filters.any_rating')}
+            </Button>
+            {[9, 8, 7, 6, 5].map((rating) => (
+              <Button
+                key={rating}
+                variant={selectedRating === rating ? "default" : "outline"}
+                className="justify-start"
+                onClick={() => setSelectedRating(rating)}
+              >
+                {rating.toFixed(1)}+ ⭐️
+              </Button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="lg"
+            className="bg-background hover:bg-accent"
+          >
             Sort By
-            <ChevronDown className="ml-2 h-4 w-4" />
+            <ChevronDown className="h-4 w-4 ml-2" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuLabel>Sort Options</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            checked={sortBy === 'release_date' && sortOrder === 'desc'}
-            onCheckedChange={() => {
-              setSortBy('release_date')
-              setSortOrder('desc')
-            }}
-          >
-            Newest First
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem
-            checked={sortBy === 'release_date' && sortOrder === 'asc'}
-            onCheckedChange={() => {
-              setSortBy('release_date')
-              setSortOrder('asc')
-            }}
-          >
-            Oldest First
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem
-            checked={sortBy === 'rating' && sortOrder === 'desc'}
-            onCheckedChange={() => {
-              setSortBy('rating')
-              setSortOrder('desc')
-            }}
-          >
-            Highest Rated
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem
-            checked={sortBy === 'title' && sortOrder === 'asc'}
-            onCheckedChange={() => {
-              setSortBy('title')
-              setSortOrder('asc')
-            }}
-          >
-            Title A-Z
-          </DropdownMenuCheckboxItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </PopoverTrigger>
+        <PopoverContent className="w-48">
+          <div className="flex flex-col gap-1">
+            {[
+              { value: 'release_date', label: t('filters.release_date') },
+              { value: 'rating', label: t('filters.rating') },
+              { value: 'title', label: t('filters.title') }
+            ].map((option) => (
+              <Button
+                key={option.value}
+                variant={sortBy === option.value ? "default" : "outline"}
+                className="justify-start"
+                onClick={() => {
+                  setSortBy(option.value as typeof sortBy)
+                }}
+              >
+                {option.label}
+              </Button>
+            ))}
+            <div className="border-t my-2" />
+            <Button
+              variant={sortOrder === 'desc' ? "default" : "outline"}
+              className="justify-start"
+              onClick={() => setSortOrder('desc')}
+            >
+              {t('filters.descending')}
+            </Button>
+            <Button
+              variant={sortOrder === 'asc' ? "default" : "outline"}
+              className="justify-start"
+              onClick={() => setSortOrder('asc')}
+            >
+              {t('filters.ascending')}
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
 
-      {/* Clear Filters */}
-      {(selectedGenres.length > 0 || selectedYear !== null || selectedRating !== null || 
-        sortBy !== 'release_date' || sortOrder !== 'desc') && (
+      {hasActiveFilters && (
         <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setSelectedGenres([])
-            setSelectedYear(null)
-            setSelectedRating(null)
-            setSortBy('release_date')
-            setSortOrder('desc')
-          }}
+          variant="outline"
+          size="lg"
+          onClick={clearFilters}
+          className="bg-background hover:bg-accent"
         >
           Clear Filters
         </Button>

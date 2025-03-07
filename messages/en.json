@@ -121,7 +121,16 @@
   },
   "movies": {
     "title": "Movies",
-    "description": "Browse our collection of Israeli movies"
+    "description": "Browse our collection of Israeli movies",
+    "filters": {
+      "all_years": "All Years",
+      "any_rating": "Any Rating",
+      "release_date": "Release Date",
+      "rating": "Rating",
+      "title": "Title",
+      "descending": "Descending",
+      "ascending": "Ascending"
+    }
   },
   "genres": {
     "notFound": "Genre not found",

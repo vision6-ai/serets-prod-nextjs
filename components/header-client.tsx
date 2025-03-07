@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Link } from 'app/i18n'
+import { Link } from '@/app/i18n'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
-import { Film, User } from 'lucide-react'
+import { Film } from 'lucide-react'
 import { ModeToggle } from './mode-toggle'
 import { LanguageSwitcherClient } from './language-switcher-client'
 import { Search } from './search'
@@ -22,7 +22,6 @@ import {
 import { cn } from '@/lib/utils'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import useSWR from 'swr'
-
 import { Genre, Theater } from '@/types/shared'
 
 // Fetch functions
@@ -53,7 +52,6 @@ const fetchCategories = async (): Promise<Genre[]> => {
         : genre.slug // Fallback to slug if no translation
     })) as Genre[] || []
     
-    console.log('Fetched categories:', transformedData)
     return transformedData
   } catch (error) {
     console.error('Exception fetching categories:', error)
@@ -74,7 +72,6 @@ const fetchTheaters = async () => {
       return []
     }
     
-    console.log('Fetched theaters:', data)
     return data || []
   } catch (error) {
     console.error('Exception fetching theaters:', error)
@@ -290,4 +287,4 @@ export default function HeaderClient({ locale }: { locale: string }) {
       </div>
     </header>
   )
-} 
+}

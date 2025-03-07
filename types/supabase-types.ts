@@ -19,12 +19,6 @@ export type Movie = {
   updated_at: string;
 };
 
-export type MovieWithTranslations = Movie & {
-  title: string;
-  hebrew_title: string | null;
-  synopsis: string | null;
-};
-
 export type MovieTranslation = {
   id: string;
   movie_id: string;
@@ -45,12 +39,6 @@ export type Actor = {
   updated_at: string;
 };
 
-export type ActorWithTranslations = Actor & {
-  name: string;
-  hebrew_name: string | null;
-  biography: string | null;
-};
-
 export type ActorTranslation = {
   id: string;
   actor_id: string;
@@ -66,11 +54,6 @@ export type Genre = {
   slug: string;
 };
 
-export type GenreWithTranslations = Genre & {
-  name: string;
-  hebrew_name: string | null;
-};
-
 export type GenreTranslation = {
   id: string;
   genre_id: string;
@@ -84,12 +67,6 @@ export type Award = {
   id: string;
   year: number;
   category: string;
-};
-
-export type AwardWithTranslations = Award & {
-  name: string;
-  hebrew_name: string | null;
-  description: string | null;
 };
 
 export type AwardTranslation = {
@@ -184,15 +161,7 @@ export type Database = {
       };
     };
     Views: {
-      movies_with_translations: {
-        Row: MovieWithTranslations;
-      };
-      actors_with_translations: {
-        Row: ActorWithTranslations;
-      };
-      genres_with_translations: {
-        Row: GenreWithTranslations;
-      };
+      // Removed old views that used WithTranslations types
     };
   };
-}; 
+};
