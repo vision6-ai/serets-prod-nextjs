@@ -25,6 +25,7 @@ export function Providers({ children, locale, messages }: ProvidersProps) {
       locale={locale} 
       messages={messages}
       // The timeZone is now handled by i18n.config.ts
+      timeZone="America/New_York"
       now={new Date()}
     >
       <QueryClientProvider client={queryClient}>

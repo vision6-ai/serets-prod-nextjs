@@ -14,7 +14,7 @@ export default function HomePage({params: {locale}}: {params: {locale: Locale}})
   const t = useTranslations('home');
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 overflow-hidden">
       {/* Hero Section */}
       <HeroSection />
 

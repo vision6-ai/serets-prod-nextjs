@@ -45,7 +45,7 @@ export function MovieSlider({ movies, locale, title, loading, viewAllHref }: Mov
           align: 'start',
           loop: true,
         }}
-        className="w-full"
+        className="w-full overflow-x-hidden"
       >
         <CarouselContent className="-ml-2 md:-ml-4">
           {movies.map((movie) => (

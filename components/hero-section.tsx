@@ -43,7 +43,8 @@ export function HeroSection() {
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           height: '100%',
-          width: '100%'
+          width: '100%',
+          maxWidth: '100vw'
         }}
         aria-hidden="true"
       />

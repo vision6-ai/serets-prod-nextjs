@@ -94,7 +94,7 @@ export function FeaturedActors() {
           <Link href="/actors">View All</Link>
         </Button>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-full overflow-hidden">
         {loading ? (
           // Loading skeleton
           Array(6).fill(null).map((_, i) => (

@@ -8,7 +8,7 @@ export default getRequestConfig(async ({ locale }) => {
 
   return {
     messages: (await import(`./messages/${locale}.json`)).default,
-    timeZone: 'Asia/Jerusalem',
+    timeZone: 'America/New_York',
     now: new Date(),
     // Add default formats for dates, numbers, etc.
     formats: {
