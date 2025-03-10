@@ -1,0 +1,16 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env --watch index.ts",
+    "deploy": "deployctl deploy --project=sync-search index.ts"
+  },
+  "imports": {
+    "std/http/server": "https://deno.land/std@0.177.0/http/server.ts",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.21.0",
+    "meilisearch": "https://esm.sh/meilisearch@0.32.3"
+  },
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true
+  }
+}
