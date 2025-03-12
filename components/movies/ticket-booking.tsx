@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,11 +22,19 @@ import { ChevronLeft, Ticket } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
+import { createClient } from '@supabase/supabase-js'
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 interface Theater {
   id: string
   name: string
   location: string
+  bigger_id: string
 }
 
 interface ShowTime {
@@ -40,26 +48,39 @@ interface TicketBookingProps {
   movieTitle: string
   posterUrl: string | null
   isRtl?: boolean
+  biggerMovieId: string
 }
 
-export function TicketBooking({ movieId, movieTitle, posterUrl, isRtl = false }: TicketBookingProps) {
+export function TicketBooking({ movieId, movieTitle, posterUrl, isRtl = false, biggerMovieId }: TicketBookingProps) {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<'theater' | 'date' | 'time' | 'seats'>('theater')
   const [selectedTheater, setSelectedTheater] = useState<Theater | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<ShowTime | null>(null)
   const [selectedSeats, setSelectedSeats] = useState<number[]>([])
+  const [theaters, setTheaters] = useState<Theater[]>([])
   
   // Type assertion for the translation function
   const t = useTranslations('booking') as (key: string) => string
 
-  // Mock data - replace with real data from API
-  const theaters: Theater[] = [
-    { id: '1', name: 'Cinema City Jerusalem', location: 'Jerusalem' },
-    { id: '2', name: 'Cinema City Glilot', location: 'Tel Aviv' },
-    { id: '3', name: 'Yes Planet Haifa', location: 'Haifa' },
-  ]
+  useEffect(() => {
+    // Fetch theaters data from Supabase
+    const fetchTheaters = async () => {
+      const { data, error } = await supabase
+        .from('theaters')
+        .select('id, name, location, bigger_id')
 
+      if (error) {
+        console.error('Error fetching theaters:', error)
+      } else {
+        setTheaters(data || [])
+      }
+    }
+
+    fetchTheaters()
+  }, [])
+
+  // Mock data - replace with real data from API
   const showTimes: ShowTime[] = [
     { id: '1', time: '10:00', available_seats: 45 },
     { id: '2', time: '13:30', available_seats: 32 },
@@ -87,6 +108,9 @@ export function TicketBooking({ movieId, movieTitle, posterUrl, isRtl = false }:
       time: selectedTime
     })
   }
+
+  // Use biggerMovieId as needed
+  console.log('Bigger Movie ID:', biggerMovieId)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

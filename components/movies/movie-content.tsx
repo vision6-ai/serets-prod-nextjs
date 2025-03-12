@@ -42,6 +42,7 @@ interface MovieContentProps {
   }[]
   similarMovies: Movie[]
   locale: string
+  biggerMovieId: string
 }
 
 export function MovieContent({
@@ -51,7 +52,8 @@ export function MovieContent({
   genres,
   awards,
   similarMovies,
-  locale
+  locale,
+  biggerMovieId
 }: MovieContentProps) {
   const { user } = useAuth()
   const trailer = videos.find(v => v.type === 'trailer')
@@ -117,6 +119,7 @@ export function MovieContent({
               movieId={movie.id}
               movieTitle={movie.title}
               posterUrl={movie.poster_url}
+              biggerMovieId={biggerMovieId}
               isRtl={isRtl}
             />
             

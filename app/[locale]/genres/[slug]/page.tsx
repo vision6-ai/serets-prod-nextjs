@@ -18,6 +18,7 @@ interface MovieTranslation {
   poster_url: string | null;
   trailer_url: string | null;
   language_code: string;
+  movie_id: string;
 }
 
 async function getGenreData(slug: string, locale: string = 'en'): Promise<{ genre: Genre; movies: Movie[] } | null> {
@@ -79,39 +80,56 @@ async function getGenreData(slug: string, locale: string = 'en'): Promise<{ genr
     }
   }
 
-  // Get movies with their translations in a single query
-  const { data: moviesWithTranslations, error: moviesError } = await supabase
+  // Get movies basic data first
+  const { data: moviesData, error: moviesError } = await supabase
     .from('movies')
     .select(`
       id,
       slug,
       release_date,
       duration,
-      rating,
-      translations:movie_translations!inner(
-        title,
-        synopsis,
-        poster_url,
-        trailer_url,
-        language_code
-      )
+      rating
     `)
     .in('id', movieIds)
-    .eq('translations.language_code', locale)
 
-  console.log('Movies result:', { moviesData: moviesWithTranslations, error: moviesError })
+  console.log('Movies result:', { moviesData, error: moviesError })
 
   if (moviesError) {
     console.error('Error fetching movies:', moviesError)
     return null
   }
 
+  // Then fetch translations separately
+  const { data: translationsData, error: translationsError } = await supabase
+    .from('movie_translations')
+    .select(`
+      title,
+      synopsis,
+      poster_url,
+      trailer_url,
+      language_code,
+      movie_id
+    `)
+    .in('movie_id', movieIds)
+    .eq('language_code', locale)
+
+  if (translationsError) {
+    console.error('Error fetching movie translations:', translationsError)
+    // Continue without translations
+  }
+
+  // Create a map of translations by movie_id for easier lookup
+  const translationsMap = new Map()
+  if (translationsData) {
+    translationsData.forEach(translation => {
+      translationsMap.set(translation.movie_id, translation)
+    })
+  }
+
   // Transform the movies data to match the expected format
-  const movies = (moviesWithTranslations || []).map(movie => {
+  const movies = (moviesData || []).map(movie => {
     // Get the translation for the current locale
-    const translation = movie.translations && movie.translations.length > 0 
-      ? movie.translations[0] as MovieTranslation
-      : null;
+    const translation = translationsMap.get(movie.id);
     
     return {
       id: movie.id,

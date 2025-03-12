@@ -25,6 +25,7 @@ interface MovieTranslation {
   poster_url: string | null;
   trailer_url: string | null;
   language_code: string;
+  movie_id: string;
 }
 
 async function getMoviesData(locale: string = 'en') {
@@ -35,15 +36,10 @@ async function getMoviesData(locale: string = 'en') {
   const now = new Date().toISOString()
 
   try {
-    // Fetch genres with translations
+    // Fetch genres with translations separately
     const { data: genresData, error: genresError } = await supabase
       .from('genres')
-      .select(`
-        id, 
-        slug,
-        translations:genre_translations(name)
-      `)
-      .eq('translations.language_code', locale)
+      .select('id, slug')
       .order('slug')
 
     if (genresError) {
@@ -51,63 +47,85 @@ async function getMoviesData(locale: string = 'en') {
       return { latest: [], topRated: [], genres: [], genreMovies: {} }
     }
 
+    // Fetch genre translations
+    const { data: genreTranslations, error: genreTranslationsError } = await supabase
+      .from('genre_translations')
+      .select('genre_id, name')
+      .eq('language_code', locale)
+
+    if (genreTranslationsError) {
+      console.error('Error fetching genre translations:', genreTranslationsError)
+      return { latest: [], topRated: [], genres: [], genreMovies: {} }
+    }
+
+    // Create a map of genre translations
+    const genreTranslationsMap = new Map();
+    genreTranslations?.forEach(translation => {
+      genreTranslationsMap.set(translation.genre_id, translation.name);
+    });
+
     // Transform genres data
     const genres = genresData?.map(genre => ({
       id: genre.id,
       slug: genre.slug,
-      name: genre.translations && genre.translations.length > 0 
-        ? genre.translations[0].name 
-        : genre.slug // Fallback to slug if no translation
-    })) || []
+      name: genreTranslationsMap.get(genre.id) || genre.slug // Fallback to slug if no translation
+    })) || [];
 
-    // Fetch latest and top rated in parallel
-    const [latestRes, topRatedRes] = await Promise.all([
-      // Latest releases (last 6 months)
-      supabase
-        .from('movies')
-        .select(`
-          id,
-          slug,
-          release_date,
-          rating,
-          translations:movie_translations!inner(
-            title,
-            poster_url,
-            language_code
-          )
-        `)
-        .lt('release_date', now)
-        .gt('release_date', new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString())
-        .eq('translations.language_code', locale)
-        .order('release_date', { ascending: false })
-        .limit(10),
+    // Fetch latest movies (last 6 months)
+    const { data: latestMovies, error: latestError } = await supabase
+      .from('movies')
+      .select('id, slug, release_date, rating')
+      .lt('release_date', now)
+      .gt('release_date', new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString())
+      .order('release_date', { ascending: false })
+      .limit(10);
 
-      // Top rated movies
-      supabase
-        .from('movies')
-        .select(`
-          id,
-          slug,
-          release_date,
-          rating,
-          translations:movie_translations!inner(
-            title,
-            poster_url,
-            language_code
-          )
-        `)
-        .lt('release_date', now)
-        .gt('rating', 7)
-        .eq('translations.language_code', locale)
-        .order('rating', { ascending: false })
-        .limit(10)
-    ])
+    if (latestError) {
+      console.error('Error fetching latest movies:', latestError)
+      return { latest: [], topRated: [], genres: [], genreMovies: {} }
+    }
+
+    // Fetch top rated movies
+    const { data: topRatedMovies, error: topRatedError } = await supabase
+      .from('movies')
+      .select('id, slug, release_date, rating')
+      .lt('release_date', now)
+      .gt('rating', 7)
+      .order('rating', { ascending: false })
+      .limit(10);
+
+    if (topRatedError) {
+      console.error('Error fetching top rated movies:', topRatedError)
+      return { latest: [], topRated: [], genres: [], genreMovies: {} }
+    }
+
+    // Get all movie IDs to fetch translations
+    const allMovieIds = [...new Set([
+      ...(latestMovies || []).map(m => m.id),
+      ...(topRatedMovies || []).map(m => m.id)
+    ])];
+
+    // Fetch translations for all movies
+    const { data: allTranslations, error: translationsError } = await supabase
+      .from('movie_translations')
+      .select('movie_id, title, poster_url, language_code')
+      .eq('language_code', locale)
+      .in('movie_id', allMovieIds);
+
+    if (translationsError) {
+      console.error('Error fetching movie translations:', translationsError)
+      return { latest: [], topRated: [], genres: [], genreMovies: {} }
+    }
+
+    // Create a map of translations
+    const translationsMap = new Map();
+    allTranslations?.forEach(translation => {
+      translationsMap.set(translation.movie_id, translation);
+    });
 
     // Transform movie data
     const transformMovieData = (movieData: any) => {
-      const translation = movieData.translations && movieData.translations.length > 0 
-        ? movieData.translations[0] as MovieTranslation
-        : null;
+      const translation = translationsMap.get(movieData.id);
       
       return {
         id: movieData.id,
@@ -120,11 +138,11 @@ async function getMoviesData(locale: string = 'en') {
       }
     }
 
-    const latest = (latestRes.data || []).map(transformMovieData)
-    const topRated = (topRatedRes.data || []).map(transformMovieData)
+    const latest = (latestMovies || []).map(transformMovieData);
+    const topRated = (topRatedMovies || []).map(transformMovieData);
 
     // Get movies for each genre (limit to 5 genres to avoid too many queries)
-    const genreMovies: Record<string, Movie[]> = {}
+    const genreMovies: Record<string, Movie[]> = {};
     
     for (const genre of genres.slice(0, 5)) {
       // Get movie IDs for this genre
@@ -132,40 +150,44 @@ async function getMoviesData(locale: string = 'en') {
         .from('movie_genres')
         .select('movie_id')
         .eq('genre_id', genre.id)
-        .limit(10)
+        .limit(10);
       
       if (movieGenres && movieGenres.length > 0) {
-        const movieIds = movieGenres.map(mg => mg.movie_id)
+        const movieIds = movieGenres.map(mg => mg.movie_id);
         
         // Get the actual movies
         const { data: genreMoviesData } = await supabase
           .from('movies')
-          .select(`
-            id,
-            slug,
-            release_date,
-            rating,
-            translations:movie_translations!inner(
-              title,
-              poster_url,
-              language_code
-            )
-          `)
+          .select('id, slug, release_date, rating')
           .in('id', movieIds)
-          .eq('translations.language_code', locale)
           .order('release_date', { ascending: false })
-          .limit(10)
+          .limit(10);
         
-        genreMovies[genre.id] = (genreMoviesData || []).map(transformMovieData)
+        // Fetch translations for these movies if not already fetched
+        const newMovieIds = genreMoviesData?.map(m => m.id).filter(id => !translationsMap.has(id)) || [];
+        
+        if (newMovieIds.length > 0) {
+          const { data: newTranslations } = await supabase
+            .from('movie_translations')
+            .select('movie_id, title, poster_url, language_code')
+            .eq('language_code', locale)
+            .in('movie_id', newMovieIds);
+          
+          newTranslations?.forEach(translation => {
+            translationsMap.set(translation.movie_id, translation);
+          });
+        }
+        
+        genreMovies[genre.id] = (genreMoviesData || []).map(transformMovieData);
       } else {
-        genreMovies[genre.id] = []
+        genreMovies[genre.id] = [];
       }
     }
 
-    return { latest, topRated, genres, genreMovies }
+    return { latest, topRated, genres, genreMovies };
   } catch (error) {
-    console.error('Error fetching movies data:', error)
-    return { latest: [], topRated: [], genres: [], genreMovies: {} }
+    console.error('Error fetching movies data:', error);
+    return { latest: [], topRated: [], genres: [], genreMovies: {} };
   }
 }
 

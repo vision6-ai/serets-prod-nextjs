@@ -16,11 +16,13 @@ interface MovieTranslation {
   poster_url: string | null;
   trailer_url: string | null;
   language_code: string;
+  movie_id: string;
 }
 
 interface GenreTranslation {
   name: string;
   language_code: string;
+  genre_id: string;
 }
 
 interface Actor {
@@ -34,7 +36,6 @@ interface Actor {
 interface Genre {
   id: string;
   slug: string;
-  translations: GenreTranslation[];
 }
 
 interface Award {
@@ -49,25 +50,11 @@ async function getMovieData(slug: string, locale: Locale) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
   
-  // Get the movie with its translations
+  // Fetch the movie data
   const { data: movie, error: movieError } = await supabase
     .from('movies')
-    .select(`
-      id,
-      slug,
-      release_date,
-      duration,
-      rating,
-      translations:movie_translations!inner(
-        title,
-        synopsis,
-        poster_url,
-        trailer_url,
-        language_code
-      )
-    `)
+    .select('id, slug, release_date, duration, rating, bigger_movie_id')
     .eq('slug', slug)
-    .eq('translations.language_code', locale)
     .single()
 
   if (movieError || !movie) {
@@ -75,9 +62,25 @@ async function getMovieData(slug: string, locale: Locale) {
     return null
   }
 
+  // Store the bigger_movie_id
+  const biggerMovieId = movie.bigger_movie_id
+  console.log('Fetched bigger_movie_id:', biggerMovieId)
+
+  // Continue with fetching translations and other data
+  const { data: translations, error: translationError } = await supabase
+    .from('movie_translations')
+    .select('title, synopsis, poster_url, trailer_url, language_code')
+    .eq('movie_id', movie.id)
+    .eq('language_code', locale)
+
+  if (translationError || !translations) {
+    console.error('Error fetching translations:', translationError)
+    return null
+  }
+
   // Extract translation data
-  const translation = movie.translations && movie.translations.length > 0 
-    ? movie.translations[0] as MovieTranslation
+  const translation = translations && translations.length > 0 
+    ? translations[0] as MovieTranslation
     : null
 
   // Combine movie data with translations
@@ -99,7 +102,8 @@ async function getMovieData(slug: string, locale: Locale) {
     trailer_url: string | null;
   };
 
-  const [videosRes, castRes, genresRes, awardsRes] = await Promise.all([
+  // Fetch additional data in parallel
+  const [videosRes, castRes, movieGenresRes, awardsRes] = await Promise.all([
     supabase
       .from('movie_videos')
       .select('*')
@@ -107,114 +111,130 @@ async function getMovieData(slug: string, locale: Locale) {
     
     supabase
       .from('movie_actors')
-      .select(`
-        movie_id,
-        actor_id,
-        role,
-        actors (
-          id,
-          slug,
-          birth_date,
-          birth_place,
-          photo_url
-        )
-      `)
+      .select('movie_id, actor_id, role')
       .eq('movie_id', movie.id),
     
     supabase
       .from('movie_genres')
-      .select(`
-        id,
-        genre_id,
-        genres (
-          id,
-          slug,
-          translations:genre_translations(
-            name,
-            language_code
-          )
-        )
-      `)
+      .select('id, genre_id')
       .eq('movie_id', movie.id),
     
     supabase
       .from('movie_awards')
-      .select(`
-        id,
-        year,
-        award_id,
-        category,
-        is_winner,
-        awards (
-          id,
-          name,
-          hebrew_name
-        )
-      `)
+      .select('id, year, award_id, category, is_winner')
       .eq('movie_id', movie.id)
       .order('year', { ascending: false })
   ])
 
+  // Fetch actors data
+  const actorIds = (castRes.data || []).map(item => item.actor_id)
+  const { data: actorsData } = await supabase
+    .from('actors')
+    .select('id, slug, birth_date, birth_place, photo_url')
+    .in('id', actorIds)
+
+  // Create a map of actors
+  const actorsMap = new Map()
+  actorsData?.forEach(actor => {
+    actorsMap.set(actor.id, actor)
+  })
+
+  // Fetch actor translations
+  const { data: actorTranslations } = await supabase
+    .from('actor_translations')
+    .select('actor_id, name, language_code')
+    .in('actor_id', actorIds)
+    .eq('language_code', locale)
+
+  // Create a map of actor translations
+  const actorTranslationsMap = new Map()
+  actorTranslations?.forEach(translation => {
+    actorTranslationsMap.set(translation.actor_id, translation)
+  })
+
   // Process cast data
-  const cast = await Promise.all((castRes.data || []).map(async (castMember) => {
-    if (!castMember.actors) return null
+  const cast = (castRes.data || []).map(castMember => {
+    const actorData = actorsMap.get(castMember.actor_id)
+    const actorTranslation = actorTranslationsMap.get(castMember.actor_id)
 
-    const actorData = Array.isArray(castMember.actors) 
-      ? castMember.actors[0] as unknown as Actor 
-      : castMember.actors as Actor
-
-    const actorTranslations = await getActorTranslations(
-      supabase,
-      castMember.actor_id,
-      locale
-    )
+    if (!actorData) return null
 
     return {
-      id: castMember.actor_id, // Use actor_id as the id
+      id: castMember.actor_id,
       role: castMember.role,
       character_name: null, // This field doesn't exist in movie_actors
       actor: {
         id: actorData.id,
-        name: actorTranslations.name || '',
+        name: actorTranslation?.name || actorData.slug,
         slug: actorData.slug,
         birth_date: actorData.birth_date,
         birth_place: actorData.birth_place,
         photo_url: actorData.photo_url
       }
     }
-  }))
+  }).filter(Boolean)
+
+  // Fetch genres data
+  const genreIds = (movieGenresRes.data || []).map(item => item.genre_id)
+  const { data: genresData } = await supabase
+    .from('genres')
+    .select('id, slug')
+    .in('id', genreIds)
+
+  // Create a map of genres
+  const genresMap = new Map()
+  genresData?.forEach(genre => {
+    genresMap.set(genre.id, genre)
+  })
+
+  // Fetch genre translations
+  const { data: genreTranslations } = await supabase
+    .from('genre_translations')
+    .select('genre_id, name, language_code')
+    .in('genre_id', genreIds)
+    .eq('language_code', locale)
+
+  // Create a map of genre translations
+  const genreTranslationsMap = new Map()
+  genreTranslations?.forEach(translation => {
+    genreTranslationsMap.set(translation.genre_id, translation)
+  })
 
   // Process genres data
-  const genres = (genresRes.data || []).map((genreData) => {
-    if (!genreData.genres) return null
+  const genres = (movieGenresRes.data || []).map(genreData => {
+    const genre = genresMap.get(genreData.genre_id)
+    const genreTranslation = genreTranslationsMap.get(genreData.genre_id)
 
-    const genreInfo = Array.isArray(genreData.genres)
-      ? genreData.genres[0] as unknown as Genre
-      : genreData.genres as Genre
-
-    // Extract genre translation for current locale
-    const genreTranslation = genreInfo.translations && 
-                            genreInfo.translations.length > 0 ? 
-                            genreInfo.translations.find((t: GenreTranslation) => t.language_code === locale) : 
-                            null
+    if (!genre) return null
 
     return {
       id: genreData.id,
       genre: {
-        id: genreInfo.id,
-        name: genreTranslation?.name || genreInfo.slug,
-        slug: genreInfo.slug
+        id: genre.id,
+        name: genreTranslation?.name || genre.slug,
+        slug: genre.slug
       }
     }
   }).filter(Boolean)
 
-  // Process awards data
-  const awards = (awardsRes.data || []).map((award) => {
-    if (!award.awards) return null
+  // Fetch awards data
+  const awardIds = (awardsRes.data || []).map(item => item.award_id)
+  const { data: awardsData } = await supabase
+    .from('awards')
+    .select('id, name, hebrew_name')
+    .in('id', awardIds)
 
-    const awardInfo = Array.isArray(award.awards)
-      ? award.awards[0] as unknown as Award
-      : award.awards as Award
+  // Create a map of awards
+  const awardsMap = new Map()
+  awardsData?.forEach(award => {
+    awardsMap.set(award.id, award)
+  })
+
+  // Process awards data
+  const awards = (awardsRes.data || []).map(award => {
+    const awardInfo = awardsMap.get(award.award_id)
+
+    if (!awardInfo) return null
 
     return {
       id: award.id,
@@ -277,6 +297,7 @@ export default async function MoviePage({ params }: { params: { slug: string, lo
     genres={data.genres} 
     awards={data.awards}
     similarMovies={data.similarMovies}
-    locale={params.locale} 
+    locale={params.locale}
+    biggerMovieId={data.bigger_movie_id}
   />
 }
