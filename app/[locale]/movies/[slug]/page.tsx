@@ -311,7 +311,7 @@ export default async function MoviePage({
 			awards={data.awards}
 			similarMovies={data.similarMovies}
 			locale={params.locale}
-			biggerMovieId={data.movie.bigger_movie_id}
+			biggerMovieId={data.movie.bigger_movie_id ?? ''}
 		/>
 	);
 }
