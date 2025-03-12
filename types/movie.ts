@@ -8,4 +8,5 @@ export interface Movie {
   rating?: number | null
   poster_url: string | null
   slug: string
+  bigger_movie_id?: string | null;
 }
