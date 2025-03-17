@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { MovieList } from '@/components/movies/movie-list'
 import { MovieFilters } from '@/components/movies/movie-filters'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { Locale } from '@/config/i18n'
 
 interface Movie {
   id: string
@@ -14,6 +15,8 @@ interface Movie {
   poster_url: string | null
   rating: number | null
   slug: string
+  synopsis: string | null
+  trailer_url: string | null
 }
 
 interface Filters {
@@ -25,10 +28,11 @@ interface Filters {
 }
 
 interface MoviesContentProps {
-  locale?: string
+  locale?: Locale
+  category?: string
 }
 
-export function MoviesContent({ locale = 'en' }: MoviesContentProps) {
+export function MoviesContent({ locale = 'en', category: propCategory }: MoviesContentProps) {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
@@ -40,8 +44,9 @@ export function MoviesContent({ locale = 'en' }: MoviesContentProps) {
     sortOrder: 'desc'
   })
 
-  // Get the current page category from the URL
-  const category = pathname?.split('/').pop() || ''
+  // Get the current page category from the URL or props
+  const urlCategory = pathname?.split('/').pop() || ''
+  const category = propCategory || urlCategory
 
   const fetchMovies = useCallback(async (filters: Filters) => {
     // Don't show loading state if filters haven't changed
@@ -67,6 +72,11 @@ export function MoviesContent({ locale = 'en' }: MoviesContentProps) {
           query = query
             .lt('release_date', now)
             .gte('rating', 7)
+          break
+          
+        case 'coming-soon':
+          query = query
+            .gt('release_date', now)
           break
       }
 
@@ -108,41 +118,50 @@ export function MoviesContent({ locale = 'en' }: MoviesContentProps) {
         // Get translations for the movies
         const moviesWithTranslations = await Promise.all(
           (data || []).map(async (movie) => {
-            // Get translations for this movie
+            // Get translations for this movie - explicitly select all needed fields
             const { data: translations } = await supabase
               .from('movie_translations')
-              .select('*')
+              .select('title, synopsis, poster_url, trailer_url, language_code, movie_id')
               .eq('movie_id', movie.id)
               .eq('language_code', locale)
               .single();
+            
+            console.log(`Movie ${movie.id} original data:`, movie);
+            console.log(`Movie ${movie.id} translations for ${locale}:`, translations);
             
             // If no translation in requested locale, try to get English translation
             if (!translations) {
               const { data: enTranslations } = await supabase
                 .from('movie_translations')
-                .select('*')
+                .select('title, synopsis, poster_url, trailer_url, language_code, movie_id')
                 .eq('movie_id', movie.id)
                 .eq('language_code', 'en')
                 .single();
                 
+              console.log(`Movie ${movie.id} English translations:`, enTranslations);
+              
+              // Make sure we're explicitly assigning the poster_url
               return {
                 ...movie,
                 title: enTranslations?.title || movie.title,
                 hebrew_title: locale === 'he' ? enTranslations?.title : movie.hebrew_title,
-                synopsis: enTranslations?.synopsis || movie.synopsis
+                synopsis: enTranslations?.synopsis || movie.synopsis,
+                poster_url: enTranslations?.poster_url || null
               };
             }
             
-            // Return movie with translations
+            // Return movie with translations - make sure we're explicitly assigning the poster_url
             return {
               ...movie,
               title: translations.title || movie.title,
               hebrew_title: locale === 'he' ? translations.title : movie.hebrew_title,
-              synopsis: translations.synopsis || movie.synopsis
+              synopsis: translations.synopsis || movie.synopsis,
+              poster_url: translations.poster_url || null
             };
           })
         );
         
+        console.log('Movies with translations:', moviesWithTranslations);
         setMovies(moviesWithTranslations || [])
       }
     } catch (error) {
@@ -160,7 +179,7 @@ export function MoviesContent({ locale = 'en' }: MoviesContentProps) {
     const initialFilters: Filters = {
       genres: [],
       sortBy: category === 'top-rated' ? 'rating' : 'release_date',
-      sortOrder: 'desc'
+      sortOrder: category === 'coming-soon' ? 'asc' : 'desc'
     }
 
     fetchMovies(initialFilters)
@@ -171,12 +190,15 @@ export function MoviesContent({ locale = 'en' }: MoviesContentProps) {
       <MovieFilters onFilterChange={fetchMovies} locale={locale} />
       <div className="min-h-[400px]">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="space-y-4">
-                <div className="aspect-[2/3] bg-muted rounded animate-pulse" />
-                <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
-                <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="overflow-hidden rounded-lg">
+                <div className="aspect-[2/3] bg-muted rounded-lg animate-pulse" />
+                <div className="p-2 space-y-2">
+                  <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
+                  <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
+                  <div className="h-4 w-1/4 bg-muted rounded animate-pulse" />
+                </div>
               </div>
             ))}
           </div>
