@@ -156,7 +156,11 @@
       "rating": "Rating",
       "title": "Title",
       "descending": "Descending",
-      "ascending": "Ascending"
+      "ascending": "Ascending",
+      "genres": "Genres",
+      "select_year": "Select Year",
+      "sort_by": "Sort By",
+      "clear": "Clear Filters"
     },
     "showing_count": "Showing {shown} of {total} movies",
     "no_results": "No movies found matching your filters.",

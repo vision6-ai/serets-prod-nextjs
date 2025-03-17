@@ -156,7 +156,11 @@
       "rating": "דירוג",
       "title": "כותרת",
       "descending": "יורד",
-      "ascending": "עולה"
+      "ascending": "עולה",
+      "genres": "ז'אנרים",
+      "select_year": "בחר שנה",
+      "sort_by": "מיין לפי",
+      "clear": "נקה מסננים"
     },
     "showing_count": "מציג {shown} מתוך {total} סרטים",
     "no_results": "לא נמצאו סרטים התואמים את המסננים שלך.",
