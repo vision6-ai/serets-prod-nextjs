@@ -6,7 +6,7 @@ import { unstable_setRequestLocale } from 'next-intl/server'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Coming Soon Movies | SERETS.CO.IL',
+  title: 'Coming Soon Movies | MovieTime',
   description: 'Discover upcoming movies that are coming soon to theaters.',
 }
 

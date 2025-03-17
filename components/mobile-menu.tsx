@@ -146,7 +146,7 @@ export function MobileMenu({
               <Link href="/" onClick={() => setIsOpen(false)}>
                 <Image
                   src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//movietime.logo.svg"
-                  alt="SERETS.CO.IL"
+                  alt="MovieTime"
                   width={120}
                   height={32}
                   style={{ width: 'auto', height: '32px' }}

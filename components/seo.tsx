@@ -10,7 +10,7 @@ interface SEOProps {
   schema?: Record<string, any>
 }
 
-const SITE_NAME = 'SERETS.CO.IL'
+const SITE_NAME = 'MovieTime'
 
 export function SEO({
   title,

@@ -277,7 +277,7 @@ export default function HeaderClient({ locale }: { locale: string }) {
           <Link href="/" className="flex items-center">
             <Image
               src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//movietime.logo.svg"
-              alt="SERETS.CO.IL"
+              alt="MovieTime"
               width={120}
               height={40}
               className="h-8 w-auto"

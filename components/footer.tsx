@@ -113,7 +113,7 @@ export default function Footer() {
                 Built by Yinon
               </p>
               <p className="text-sm text-muted-foreground">
-                © {new Date().getFullYear()} SERETS.CO.IL. All rights reserved.
+                © {new Date().getFullYear()} MovieTime. All rights reserved.
               </p>
             </div>
             <div className="flex gap-6">

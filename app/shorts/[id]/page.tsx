@@ -6,10 +6,10 @@ import { notFound } from 'next/navigation'
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'Movie Trailers | SERETS.CO.IL',
-  description: 'Watch the latest Israeli movie trailers in an immersive vertical feed.',
+  title: 'Movie Trailers | MovieTime',
+  description: 'Watch movie trailers for upcoming and current films.',
   openGraph: {
-    title: 'Movie Trailers | SERETS.CO.IL',
+    title: 'Movie Trailers | MovieTime',
     description: 'Watch the latest Israeli movie trailers in an immersive vertical feed.',
     type: 'video.other'
   }
