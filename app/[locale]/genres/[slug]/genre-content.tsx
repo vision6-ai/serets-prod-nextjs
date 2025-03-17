@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { MovieList } from '@/components/movies/movie-list'
 import type { Movie } from '@/types/movie'
+import { Locale } from '@/config/i18n'
 
 interface Genre {
   id: string
@@ -36,7 +37,7 @@ export function GenreContent({ params, initialData }: GenreContentProps) {
         </div>
 
         {movies.length > 0 ? (
-          <MovieList movies={movies} locale={params.locale} />
+          <MovieList movies={movies} locale={params.locale as Locale} />
         ) : (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
