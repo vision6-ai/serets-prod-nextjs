@@ -174,20 +174,6 @@ export default function HeaderClient({ locale }: { locale: string }) {
         <NavigationMenuTrigger>{t('categories')}</NavigationMenuTrigger>
         <NavigationMenuContent>
           <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-            <li>
-              <Link
-                href="/shorts"
-                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-              >
-                <div className="flex items-center gap-2 text-sm font-medium leading-none">
-                  <Film className="h-4 w-4" />
-                  <span>{t('shorts')}</span>
-                </div>
-                <p className="line-clamp-2 text-sm text-muted-foreground">
-                  {t('shortsDescription')}
-                </p>
-              </Link>
-            </li>
             <li className="md:col-span-2">
               <div className="border-b my-2" />
             </li>
@@ -272,22 +258,6 @@ export default function HeaderClient({ locale }: { locale: string }) {
           </Link>
         </NavigationMenuLink>
       </NavigationMenuItem>
-
-      <NavigationMenuItem>
-        <NavigationMenuLink asChild>
-          <Link href="/blog" className={navigationMenuTriggerStyle()}>
-            {t('blog')}
-          </Link>
-        </NavigationMenuLink>
-      </NavigationMenuItem>
-
-      <NavigationMenuItem>
-        <NavigationMenuLink asChild>
-          <Link href="/shorts" className={navigationMenuTriggerStyle()}>
-            {t('shorts')}
-          </Link>
-        </NavigationMenuLink>
-      </NavigationMenuItem>
     </NavigationMenuList>
   ), [categories, theaters, t, locale])
 
@@ -306,7 +276,7 @@ export default function HeaderClient({ locale }: { locale: string }) {
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center">
             <Image
-              src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//serets.co.il-logo-v1.svg"
+              src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//movietime.logo.svg"
               alt="SERETS.CO.IL"
               width={120}
               height={40}

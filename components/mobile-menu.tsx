@@ -145,7 +145,7 @@ export function MobileMenu({
               
               <Link href="/" onClick={() => setIsOpen(false)}>
                 <Image
-                  src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//serets.co.il-logo-v1.svg"
+                  src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//movietime.logo.svg"
                   alt="SERETS.CO.IL"
                   width={120}
                   height={32}
@@ -246,6 +246,7 @@ export function MobileMenu({
               </button>
 
               {/* Shorts */}
+              {/* Commenting out Shorts link as it's not ready yet
               <Link
                 href="/shorts"
                 className="flex items-center justify-between py-3 px-1 text-base font-medium border-b"
@@ -260,6 +261,7 @@ export function MobileMenu({
                   isRtl && "transform rotate-180"
                 )} />
               </Link>
+              */}
 
               {/* Categories */}
               <AccordionItem value="categories" className="border-b">
@@ -368,6 +370,7 @@ export function MobileMenu({
                 )} />
               </Link>
 
+              {/* Commenting out Blog link as it's not ready yet
               <Link
                 href="/blog"
                 className="flex items-center justify-between py-3 px-1 text-base font-medium border-b"
@@ -379,6 +382,7 @@ export function MobileMenu({
                   isRtl && "transform rotate-180"
                 )} />
               </Link>
+              */}
             </Accordion>
           </div>
         </div>
