@@ -46,7 +46,7 @@ export function Search() {
 
   const handleSelect = (result: SearchResult) => {
     setIsOpen(false)
-    router.push(`/${locale}/${result.type}s/${result.slug}`)
+    router.push(`/${result.type}s/${result.slug}`)
   }
 
   // Custom Hit component

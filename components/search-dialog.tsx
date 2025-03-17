@@ -148,7 +148,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
+      <DialogContent className="w-[95vw] sm:max-w-[600px] h-[80vh] sm:h-[600px] p-0 gap-0 overflow-hidden flex flex-col">
         <DialogHeader className="px-4 pt-4 pb-2 border-b sticky top-0 bg-background z-10">
           <DialogTitle className="sr-only">
             {t('search')}
@@ -176,8 +176,8 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="p-4 space-y-4">
-              {[1, 2, 3].map((i) => (
+            <div className="p-4 space-y-4 min-h-[200px]">
+              {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center gap-3 p-2">
                   <Skeleton className="w-12 h-16 rounded" />
                   <div className="flex-grow space-y-2">
@@ -194,7 +194,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                   {results.map((result) => (
                     <Link
                       key={`${result.type}-${result.id}`}
-                      href={`/${locale}/${result.type}s/${result.slug}`}
+                      href={`/${result.type}s/${result.slug}`}
                       onClick={() => onOpenChange(false)}
                       className="flex items-center gap-3 p-4 hover:bg-accent/50 transition-colors"
                     >
@@ -259,21 +259,25 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                 </div>
               ) : (
                 query.length >= 2 && (
-                  <div className="p-6 text-center">
-                    <p className="text-muted-foreground mb-2">No results found</p>
-                    <p className="text-sm text-muted-foreground">
-                      Try searching for something else
-                    </p>
+                  <div className="flex items-center justify-center h-full min-h-[200px]">
+                    <div className="text-center p-6">
+                      <p className="text-muted-foreground mb-2 text-lg">No results found</p>
+                      <p className="text-sm text-muted-foreground">
+                        Try searching for something else
+                      </p>
+                    </div>
                   </div>
                 )
               )}
 
               {/* Initial search prompt when dialog is opened */}
               {query.length < 2 && (
-                <div className="p-6 text-center">
-                  <p className="text-muted-foreground">
-                    Type at least 2 characters to search
-                  </p>
+                <div className="flex items-center justify-center h-full min-h-[200px]">
+                  <div className="text-center p-6">
+                    <p className="text-muted-foreground text-lg">
+                      Type at least 2 characters to search
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

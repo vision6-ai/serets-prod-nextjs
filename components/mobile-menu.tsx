@@ -27,7 +27,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-
+import { SearchDialog } from './search-dialog'
 import { Genre, Theater } from '@/types/shared'
 import { cn } from '@/lib/utils'
 
@@ -60,7 +60,7 @@ export function MobileMenu({
 }: MobileMenuProps) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
   const supabase = createClient()
@@ -92,14 +92,6 @@ export function MobileMenu({
     setIsOpen(false)
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/${locale}/search?q=${encodeURIComponent(searchQuery)}`)
-      setIsOpen(false)
-    }
-  }
-
   // Get user initials for avatar fallback
   const getInitials = () => {
     if (!user || !user.email) return 'U'
@@ -115,278 +107,284 @@ export function MobileMenu({
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <MenuIcon className="h-6 w-6" />
-          <span className="sr-only">Toggle menu</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent 
-        side={isRtl ? "right" : "left"} 
-        className="w-full h-full p-0 flex flex-col bg-background"
-      >
-        <SheetHeader className="sr-only">
-          <SheetTitle>{t('menuTitle', 'Main Menu')}</SheetTitle>
-        </SheetHeader>
-        
-        <div className={cn(
-          "flex-1 overflow-y-auto",
-          isRtl && "rtl"
-        )}>
-          {/* Header */}
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b theme-transition">
-            <div className="flex items-center justify-between p-4">
-              <SheetClose asChild>
-                <Button variant="ghost" size="icon">
-                  <X className="h-6 w-6" />
-                </Button>
-              </SheetClose>
-              
-              <Link href="/" onClick={() => setIsOpen(false)}>
-                <Image
-                  src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//movietime.logo.svg"
-                  alt="MovieTime"
-                  width={120}
-                  height={32}
-                  style={{ width: 'auto', height: '32px' }}
-                  priority
-                />
-              </Link>
-            </div>
+    <>
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="md:hidden">
+            <MenuIcon className="h-6 w-6" />
+            <span className="sr-only">Toggle menu</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent 
+          side={isRtl ? "right" : "left"} 
+          className="w-full h-full p-0 flex flex-col bg-background"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>{t('menuTitle', 'Main Menu')}</SheetTitle>
+          </SheetHeader>
+          
+          <div className={cn(
+            "flex-1 overflow-y-auto",
+            isRtl && "rtl"
+          )}>
+            {/* Header */}
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b theme-transition">
+              <div className="flex items-center justify-between p-4">
+                <SheetClose asChild>
+                  <Button variant="ghost" size="icon">
+                    <X className="h-6 w-6" />
+                  </Button>
+                </SheetClose>
+                
+                <Link href="/" onClick={() => setIsOpen(false)}>
+                  <Image
+                    src="https://llasjkahpdovjshvroky.supabase.co/storage/v1/object/public/movie-posters//movietime.logo.svg"
+                    alt="MovieTime"
+                    width={120}
+                    height={32}
+                    style={{ width: 'auto', height: '32px' }}
+                    priority
+                  />
+                </Link>
+              </div>
 
-            {/* User Profile Section */}
-            <div className="px-4 py-3 border-b">
-              {!loading && (
-                user ? (
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={user.user_metadata.avatar_url} />
-                        <AvatarFallback>{getInitials()}</AvatarFallback>
-                      </Avatar>
-                      <div className="overflow-hidden">
-                        <p className="font-medium truncate">
-                          {user.user_metadata.full_name || user.email?.split('@')[0]}
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                          {user.email}
-                        </p>
+              {/* User Profile Section */}
+              <div className="px-4 py-3 border-b">
+                {!loading && (
+                  user ? (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={user.user_metadata.avatar_url} />
+                          <AvatarFallback>{getInitials()}</AvatarFallback>
+                        </Avatar>
+                        <div className="overflow-hidden">
+                          <p className="font-medium truncate">
+                            {user.user_metadata.full_name || user.email?.split('@')[0]}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate max-w-[200px]">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href="/profile" onClick={() => setIsOpen(false)}>
+                            Profile
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleSignOut}>
+                          Sign Out
+                        </Button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href="/profile" onClick={() => setIsOpen(false)}>
-                          Profile
-                        </Link>
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={handleSignOut}>
-                        Sign Out
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button asChild variant="default" className="w-full">
-                    <Link href={`/auth`} onClick={() => setIsOpen(false)}>
-                      <LogIn className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
-                      {t('signIn')}
-                    </Link>
-                  </Button>
-                )
-              )}
-            </div>
-
-            {/* Search Bar */}
-            <div className="p-4 border-b">
-              <form onSubmit={handleSearch} className="relative">
-                <Search className={cn(
-                  "absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground",
-                  isRtl ? "right-3" : "left-3"
-                )} />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('search', 'Search')}
-                  className={cn(
-                    "w-full",
-                    isRtl ? "pr-10 pl-4" : "pl-10 pr-4"
-                  )}
-                />
-              </form>
-            </div>
-
-            {/* Language Switcher */}
-            <div className="p-4 border-b">
-              <p className="text-sm font-medium mb-2 text-muted-foreground">{t('language', 'Language')}</p>
-              <LanguageSwitcherClient locale={locale} />
-            </div>
-          </div>
-
-          {/* Navigation Menu */}
-          <div className="p-4">
-            <Accordion type="single" collapsible className="w-full">
-              {/* Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className={cn(
-                  "flex items-center justify-between w-full py-3 px-1 text-base font-medium border-b",
-                  isRtl && "flex-row-reverse text-right"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  {theme === 'dark' ? (
-                    <Sun className="h-5 w-5 text-primary" />
                   ) : (
-                    <Moon className="h-5 w-5 text-primary" />
+                    <Button asChild variant="default" className="w-full">
+                      <Link href={`/auth`} onClick={() => setIsOpen(false)}>
+                        <LogIn className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
+                        {t('signIn')}
+                      </Link>
+                    </Button>
+                  )
+                )}
+              </div>
+
+              {/* Search Bar */}
+              <div className="p-4 border-b">
+                <div className="relative" onClick={() => {
+                  setSearchOpen(true);
+                  setIsOpen(false);
+                }}>
+                  <Search className={cn(
+                    "absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground",
+                    isRtl ? "right-3" : "left-3"
+                  )} />
+                  <Input
+                    readOnly
+                    placeholder={t('search', 'Search')}
+                    className={cn(
+                      "w-full cursor-pointer",
+                      isRtl ? "pr-10 pl-4" : "pl-10 pr-4"
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Language Switcher */}
+              <div className="p-4 border-b">
+                <p className="text-sm font-medium mb-2 text-muted-foreground">{t('language', 'Language')}</p>
+                <LanguageSwitcherClient locale={locale} />
+              </div>
+            </div>
+
+            {/* Navigation Menu */}
+            <div className="p-4">
+              <Accordion type="single" collapsible className="w-full">
+                {/* Theme Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className={cn(
+                    "flex items-center justify-between w-full py-3 px-1 text-base font-medium border-b",
+                    isRtl && "flex-row-reverse text-right"
                   )}
-                  <span>
-                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                  </span>
-                </div>
-              </button>
-
-              {/* Shorts */}
-              {/* Commenting out Shorts link as it's not ready yet
-              <Link
-                href="/shorts"
-                className="flex items-center justify-between py-3 px-1 text-base font-medium border-b"
-                onClick={() => setIsOpen(false)}
-              >
-                <div className="flex items-center gap-3">
-                  <Film className="h-5 w-5 text-primary" />
-                  <span>{t('shorts')}</span>
-                </div>
-                <DirectionIcon className={cn(
-                  "h-5 w-5 text-muted-foreground",
-                  isRtl && "transform rotate-180"
-                )} />
-              </Link>
-              */}
-
-              {/* Categories */}
-              <AccordionItem value="categories" className="border-b">
-                <AccordionTrigger className={cn(
-                  "py-3 px-1 text-base font-medium hover:no-underline",
-                  isRtl && "flex-row-reverse"
-                )}>
+                >
                   <div className="flex items-center gap-3">
-                    <Star className="h-5 w-5 text-primary" />
-                    <span>{t('categories')}</span>
+                    {theme === 'dark' ? (
+                      <Sun className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Moon className="h-5 w-5 text-primary" />
+                    )}
+                    <span>
+                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    </span>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className={cn(
-                  isRtl ? "pr-8 pl-1" : "pl-8 pr-1"
-                )}>
-                  <div className="space-y-3 py-1">
-                    {categories.map((category) => (
-                      <Link
-                        key={category.slug}
-                        href={`/genres/${category.slug}`}
-                        className="block text-sm hover:text-primary"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {category.name}
-                      </Link>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+                </button>
 
-              {/* Theaters */}
-              <AccordionItem value="theaters" className="border-b">
-                <AccordionTrigger className={cn(
-                  "py-3 px-1 text-base font-medium hover:no-underline",
-                  isRtl && "flex-row-reverse"
-                )}>
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <span>{t('theaters')}</span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className={cn(
-                  isRtl ? "pr-8 pl-1" : "pl-8 pr-1"
-                )}>
-                  <Link
-                    href="/theaters"
-                    className="block mb-3 text-sm font-medium hover:text-primary"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    {t('theaters')}
-                  </Link>
-                  <div className="space-y-3">
-                    {theaters.slice(0, 5).map((theater) => (
-                      <Link
-                        key={theater.slug}
-                        href={`/theaters/${theater.slug}`}
-                        className="block text-sm hover:text-primary"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {theater.name}
-                      </Link>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* Movies */}
-              <AccordionItem value="movies" className="border-b">
-                <AccordionTrigger className={cn(
-                  "py-3 px-1 text-base font-medium hover:no-underline",
-                  isRtl && "flex-row-reverse"
-                )}>
+                {/* Shorts */}
+                {/* Commenting out Shorts link as it's not ready yet
+                <Link
+                  href="/shorts"
+                  className="flex items-center justify-between py-3 px-1 text-base font-medium border-b"
+                  onClick={() => setIsOpen(false)}
+                >
                   <div className="flex items-center gap-3">
                     <Film className="h-5 w-5 text-primary" />
-                    <span>{t('movies')}</span>
+                    <span>{t('shorts')}</span>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className={cn(
-                  isRtl ? "pr-8 pl-1" : "pl-8 pr-1"
-                )}>
-                  <div className="space-y-3 py-1">
-                    {topMovies.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className="block text-sm hover:text-primary"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {t(item.title.toLowerCase().replace(' ', ''))}
-                      </Link>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+                  <DirectionIcon className={cn(
+                    "h-5 w-5 text-muted-foreground",
+                    isRtl && "transform rotate-180"
+                  )} />
+                </Link>
+                */}
 
-              {/* Direct Links */}
-              <Link
-                href="/actors"
-                className="flex items-center justify-between py-3 px-1 text-base font-medium border-b"
-                onClick={() => setIsOpen(false)}
-              >
-                <span>{t('actors')}</span>
-                <DirectionIcon className={cn(
-                  "h-5 w-5 text-muted-foreground",
-                  isRtl && "transform rotate-180"
-                )} />
-              </Link>
+                {/* Categories */}
+                <AccordionItem value="categories" className="border-b">
+                  <AccordionTrigger className={cn(
+                    "py-3 px-1 text-base font-medium hover:no-underline",
+                    isRtl && "flex-row-reverse"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <Star className="h-5 w-5 text-primary" />
+                      <span>{t('categories')}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className={cn(
+                    isRtl ? "pr-8 pl-1" : "pl-8 pr-1"
+                  )}>
+                    <div className="space-y-3 py-1">
+                      {categories.map((category) => (
+                        <Link
+                          key={category.slug}
+                          href={`/genres/${category.slug}`}
+                          className="block text-sm hover:text-primary"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          {category.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-              {/* Commenting out Blog link as it's not ready yet
-              <Link
-                href="/blog"
-                className="flex items-center justify-between py-3 px-1 text-base font-medium border-b"
-                onClick={() => setIsOpen(false)}
-              >
-                <span>{t('blog')}</span>
-                <DirectionIcon className={cn(
-                  "h-5 w-5 text-muted-foreground",
-                  isRtl && "transform rotate-180"
-                )} />
-              </Link>
-              */}
-            </Accordion>
+                {/* Theaters */}
+                <AccordionItem value="theaters" className="border-b">
+                  <AccordionTrigger className={cn(
+                    "py-3 px-1 text-base font-medium hover:no-underline",
+                    isRtl && "flex-row-reverse"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      <span>{t('theaters')}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className={cn(
+                    isRtl ? "pr-8 pl-1" : "pl-8 pr-1"
+                  )}>
+                    <Link
+                      href="/theaters"
+                      className="block mb-3 text-sm font-medium hover:text-primary"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {t('theaters')}
+                    </Link>
+                    <div className="space-y-3">
+                      {theaters.slice(0, 5).map((theater) => (
+                        <Link
+                          key={theater.slug}
+                          href={`/theaters/${theater.slug}`}
+                          className="block text-sm hover:text-primary"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          {theater.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Movies */}
+                <AccordionItem value="movies" className="border-b">
+                  <AccordionTrigger className={cn(
+                    "py-3 px-1 text-base font-medium hover:no-underline",
+                    isRtl && "flex-row-reverse"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <Film className="h-5 w-5 text-primary" />
+                      <span>{t('movies')}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className={cn(
+                    isRtl ? "pr-8 pl-1" : "pl-8 pr-1"
+                  )}>
+                    <div className="space-y-3 py-1">
+                      {topMovies.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block text-sm hover:text-primary"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          {t(item.title.toLowerCase().replace(' ', ''))}
+                        </Link>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Direct Links */}
+                <Link
+                  href="/actors"
+                  className="flex items-center justify-between py-3 px-1 text-base font-medium border-b"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span>{t('actors')}</span>
+                  <DirectionIcon className={cn(
+                    "h-5 w-5 text-muted-foreground",
+                    isRtl && "transform rotate-180"
+                  )} />
+                </Link>
+
+                {/* Commenting out Blog link as it's not ready yet
+                <Link
+                  href="/blog"
+                  className="flex items-center justify-between py-3 px-1 text-base font-medium border-b"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span>{t('blog')}</span>
+                  <DirectionIcon className={cn(
+                    "h-5 w-5 text-muted-foreground",
+                    isRtl && "transform rotate-180"
+                  )} />
+                </Link>
+                */}
+              </Accordion>
+            </div>
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
