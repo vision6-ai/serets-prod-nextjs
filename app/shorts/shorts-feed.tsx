@@ -20,7 +20,7 @@ interface Video {
   title: string
   cloudflare_id: string
   language: string | null
-  movies: Movie[]
+  movies: Movie | Movie[]
 }
 
 interface ShortsFeedProps {
@@ -34,6 +34,7 @@ export default function ShortsFeed({ videos, initialVideoId }: ShortsFeedProps) 
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [isScrolling, setIsScrolling] = useState(false)
   const [touchDirection, setTouchDirection] = useState<'up' | 'down' | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
   const touchStartTime = useRef<number>(0)
   const lastTouchPosition = useRef<number | null>(null)
@@ -43,8 +44,15 @@ export default function ShortsFeed({ videos, initialVideoId }: ShortsFeedProps) 
     fps: 0,
   })
 
+  // Client-side only mounting
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   // Debug logging for component state
   useEffect(() => {
+    if (!isMounted) return;
+    
     console.log('ShortsFeed State:', {
       activeIndex,
       totalVideos: videos.length,
@@ -52,10 +60,11 @@ export default function ShortsFeed({ videos, initialVideoId }: ShortsFeedProps) 
       isScrolling,
       touchDirection
     })
-  }, [activeIndex, videos, isScrolling, touchDirection])
+  }, [activeIndex, videos, isScrolling, touchDirection, isMounted])
 
   // Set initial video index based on URL
   useEffect(() => {
+    if (!isMounted) return;
     if (initialVideoId) {
       const index = videos.findIndex(v => v.cloudflare_id === initialVideoId)
       if (index >= 0) {
@@ -63,11 +72,11 @@ export default function ShortsFeed({ videos, initialVideoId }: ShortsFeedProps) 
         setActiveIndex(index)
       }
     }
-  }, [initialVideoId, videos])
+  }, [initialVideoId, videos, isMounted])
 
   // Performance monitoring
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || !isMounted) return;
 
     let animationFrameId: number
 
@@ -96,7 +105,7 @@ export default function ShortsFeed({ videos, initialVideoId }: ShortsFeedProps) 
 
     animationFrameId = requestAnimationFrame(measurePerformance)
     return () => cancelAnimationFrame(animationFrameId)
-  }, [isScrolling])
+  }, [isScrolling, isMounted])
 
   const onTouchStart = (e: React.TouchEvent) => {
     const touch = e.targetTouches[0].clientY
@@ -201,11 +210,23 @@ export default function ShortsFeed({ videos, initialVideoId }: ShortsFeedProps) 
   }, [activeIndex, videos.length])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || !isMounted) return;
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown])
+  }, [handleKeyDown, isMounted])
+
+  // If not yet mounted (server-side), render a simple loading state
+  if (!isMounted) {
+    return (
+      <div className="fixed inset-0 bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse h-32 w-32 rounded-full bg-gray-700 mx-auto mb-4"></div>
+          <p className="text-2xl text-gray-300">Loading shorts feed...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -230,10 +251,7 @@ export default function ShortsFeed({ videos, initialVideoId }: ShortsFeedProps) 
             data-testid={`video-container-${video.cloudflare_id}`}
           >
             <VideoPlayer
-              trailer={{
-                ...video,
-                movies: video.movies[0]
-              }}
+              trailer={video}
               isActive={index === activeIndex}
             />
           </div>

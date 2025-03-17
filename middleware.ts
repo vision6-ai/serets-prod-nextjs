@@ -73,6 +73,22 @@ export async function middleware(request: NextRequest) {
   // Get the pathname
   const { pathname } = request.nextUrl
   
+  // Special handling for shorts paths
+  if (pathname.startsWith('/shorts') || pathname === '/shorts') {
+    // Allow direct access to /shorts and its subpaths
+    return NextResponse.next()
+  }
+  
+  // Check if it's a localized shorts URL (e.g., /en/shorts or /he/shorts)
+  const isShortsWithLocale = /^\/(he|en)\/shorts(?:\/.*)?$/.test(pathname)
+  
+  // Redirect localized shorts URLs to the non-localized version
+  if (isShortsWithLocale) {
+    // Extract the shorts part of the path (everything after /locale/)
+    const shortsPath = pathname.replace(/^\/(he|en)\//, '')
+    return NextResponse.redirect(new URL(`/${shortsPath}`, request.url))
+  }
+  
   // Get stored locale preference from cookie
   const localeCookie = request.cookies.get(LOCALE_COOKIE)
   
@@ -108,7 +124,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Check if it's a direct route without locale
+  // Check if it's a direct route without locale (but not /shorts)
   const isNonLocalizedRoute = /^\/(actors|movies|genres)/.test(pathname)
   
   // Redirect non-localized routes to include the locale (from cookie if available or default)
@@ -133,5 +149,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/(he|en)/:path*', '/actors/:path*', '/movies/:path*', '/genres/:path*']
+  matcher: ['/', '/(he|en)/:path*', '/actors/:path*', '/movies/:path*', '/genres/:path*', '/shorts', '/shorts/:path*']
 }
