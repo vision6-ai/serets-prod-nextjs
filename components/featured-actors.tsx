@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { Link } from '@/app/i18n'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase'
 import { useLocale } from 'next-intl'
+import { Locale } from '@/config/i18n'
 
 interface Actor {
   id: string
@@ -24,7 +25,7 @@ interface ActorTranslation {
 export function FeaturedActors() {
   const [actors, setActors] = useState<Actor[]>([])
   const [loading, setLoading] = useState(true)
-  const locale = useLocale() as string
+  const locale = useLocale() as Locale
   const supabase = createClient()
 
   useEffect(() => {

@@ -7,7 +7,7 @@ import {MovieSections} from '@/components/movies/movie-sections';
 import {FeaturedActors} from '@/components/featured-actors';
 import {MovieSkeleton, ActorSkeleton} from '@/components/skeletons';
 import {unstable_setRequestLocale} from 'next-intl/server';
-import { HeroSection } from '@/components/hero-section';
+import { NowInTheaters } from '@/components/movies/now-in-theaters';
 
 export default function HomePage({params: {locale}}: {params: {locale: Locale}}) {
   unstable_setRequestLocale(locale);
@@ -15,8 +15,8 @@ export default function HomePage({params: {locale}}: {params: {locale: Locale}})
 
   return (
     <div className="container mx-auto px-4 py-8 overflow-hidden">
-      {/* Hero Section */}
-      <HeroSection />
+      {/* Now In Theaters Section */}
+      <NowInTheaters locale={locale} />
 
       {/* Featured Movies Section */}
       <Suspense fallback={<MovieSkeleton />}>

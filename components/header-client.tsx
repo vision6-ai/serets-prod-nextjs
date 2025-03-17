@@ -108,16 +108,18 @@ type NavigationKeys =
   | 'topRated'
   | 'awardWinners'
   | 'comingSoon'
+  | 'nowInTheaters'
   | 'shortsDescription';
 
 // Top movies data - static to avoid unnecessary fetches
 type MovieSection = {
-  title: 'Latest Releases' | 'Top Rated' | 'Award Winners' | 'Coming Soon'
+  title: 'Latest Releases' | 'Top Rated' | 'Award Winners' | 'Coming Soon' | 'Now in Theaters'
   href: string
   key: NavigationKeys
 }
 
 const topMovies: MovieSection[] = [
+  { title: 'Now in Theaters', href: '/movies/now-in-theaters', key: 'nowInTheaters' },
   { title: 'Latest Releases', href: '/movies/latest', key: 'latestReleases' },
   { title: 'Top Rated', href: '/movies/top-rated', key: 'topRated' },
   { title: 'Award Winners', href: '/movies/award-winners', key: 'awardWinners' },

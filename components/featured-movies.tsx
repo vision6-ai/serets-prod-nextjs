@@ -7,7 +7,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import Link from 'next/link'
+import { Link } from '@/app/i18n'
+import { useLocale } from 'next-intl'
+import { Locale } from '@/config/i18n'
 
 interface Movie {
   id: string
@@ -30,6 +32,7 @@ export function FeaturedMovies() {
   const [loading, setLoading] = useState(true)
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(false)
+  const locale = useLocale() as Locale
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
@@ -94,7 +97,7 @@ export function FeaturedMovies() {
             <span className="sr-only">Next movies</span>
           </Button>
           <Button asChild variant="ghost">
-            <Link href="/movies">View All</Link>
+            <Link href="/movies" locale={locale}>View All</Link>
           </Button>
         </div>
       </div>
@@ -119,7 +122,7 @@ export function FeaturedMovies() {
             movies.map((movie) => (
               <div key={movie.id} className="min-w-[280px] max-w-[280px] pl-4">
                 <Card className="hover-card h-full">
-                  <Link href={`/movies/${movie.slug}`}>
+                  <Link href={`/movies/${movie.slug}`} locale={locale}>
                     <CardContent className="p-4 hover:bg-accent/5 transition-colors h-full flex flex-col">
                       {movie.poster_url ? (
                         <img

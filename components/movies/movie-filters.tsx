@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Locale } from '@/config/i18n'
 
 interface Genre {
   id: string
@@ -19,7 +20,7 @@ interface Genre {
 
 interface MovieFiltersProps {
   onFilterChange: (filters: Filters) => void
-  locale: string
+  locale: Locale
 }
 
 export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {

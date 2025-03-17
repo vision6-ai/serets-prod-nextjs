@@ -20,6 +20,7 @@
     "toprated": "Top Rated",
     "awardwinners": "Award Winners",
     "comingsoon": "Coming Soon",
+    "nowInTheaters": "Now in Theaters",
     "search": "Search",
     "language": "Language",
     "menuTitle": "Main Menu",
@@ -63,7 +64,9 @@
       "subtitle": "Your gateway to the world of Israeli movies, actors, and stories",
       "browseMovies": "Browse Movies",
       "meetActors": "Meet the Actors"
-    }
+    },
+    "nowInTheaters": "Now in Theaters",
+    "nowInTheatersSubtitle": "Discover movies currently showing in theaters"
   },
   "theaters": {
     "theaters": "Theaters",

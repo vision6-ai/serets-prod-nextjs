@@ -59,6 +59,9 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
     try {
       let query = supabase.from('movies').select('*')
       const now = new Date().toISOString()
+      
+      // Define a date 30 days ago for "now in theaters" movies
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
       // Apply category-specific filters
       switch (category) {
@@ -77,6 +80,12 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
         case 'coming-soon':
           query = query
             .gt('release_date', now)
+          break
+          
+        case 'now-in-theaters':
+          query = query
+            .lt('release_date', now)  // Release date is in the past (already released)
+            .gt('release_date', thirtyDaysAgo)  // But not too old (within the last 30 days)
           break
       }
 

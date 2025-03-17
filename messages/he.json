@@ -20,6 +20,7 @@
     "toprated": "מדורגים גבוה",
     "awardwinners": "זוכי פרסים",
     "comingsoon": "בקרוב",
+    "nowInTheaters": "מציג כעת בקולנוע",
     "search": "חיפוש",
     "language": "שפה",
     "menuTitle": "תפריט ראשי",
@@ -63,7 +64,9 @@
       "subtitle": "השער שלך לעולם הסרטים, השחקנים והסיפורים הישראליים",
       "browseMovies": "עיין בסרטים",
       "meetActors": "פגוש את השחקנים"
-    }
+    },
+    "nowInTheaters": "מציג כעת בקולנוע",
+    "nowInTheatersSubtitle": "גלה סרטים המוקרנים כעת בבתי הקולנוע"
   },
   "theaters": {
     "theaters": "בתי קולנוע",

@@ -31,7 +31,7 @@ export function MovieSlider({ movies, locale, title, loading, viewAllHref }: Mov
           <h2 className="text-2xl font-bold">{title}</h2>
           {viewAllHref && (
             <Button variant="ghost" size="sm" asChild>
-              <Link href={viewAllHref} locale={locale} className="flex items-center">
+              <Link href={viewAllHref} className="flex items-center">
                 View All <ChevronRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
@@ -53,25 +53,49 @@ export function MovieSlider({ movies, locale, title, loading, viewAllHref }: Mov
               key={movie.id}
               className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5"
             >
-              <Card className="group overflow-hidden">
-                <Link href={`/movies/${movie.slug}`} locale={locale}>
-                  <CardContent className="p-0 relative aspect-[2/3]">
+              <Link 
+                href={`/movies/${movie.slug}`}
+                locale={locale}
+                className="group block overflow-hidden rounded-lg transition-all hover:scale-105"
+              >
+                <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-muted">
+                  {movie.poster_url ? (
                     <img
-                      src={movie.poster_url || '/placeholder-poster.jpg'}
+                      src={movie.poster_url}
                       alt={movie.title}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="object-cover w-full h-full transition-all"
+                      loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                      <div className="text-center p-4">
-                        <h3 className="text-lg font-semibold mb-2">{movie.title}</h3>
-                        {movie.hebrew_title && movie.hebrew_title !== movie.title && (
-                          <p className="text-sm text-gray-300">{movie.hebrew_title}</p>
-                        )}
-                      </div>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                      <span className="text-muted-foreground">{movie.title}</span>
                     </div>
-                  </CardContent>
-                </Link>
-              </Card>
+                  )}
+                </div>
+                <div className="space-y-1 p-2">
+                  <h3 className="font-semibold leading-none">
+                    {movie.title}
+                  </h3>
+                  {movie.release_date && (
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(movie.release_date).getFullYear()}
+                    </p>
+                  )}
+                  {movie.rating && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-medium">
+                        {movie.rating.toFixed(1)}
+                      </span>
+                      <svg
+                        className="h-4 w-4 fill-current text-yellow-400"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </Link>
             </CarouselItem>
           ))}
         </CarouselContent>

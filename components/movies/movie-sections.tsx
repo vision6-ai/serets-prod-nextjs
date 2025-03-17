@@ -44,7 +44,7 @@ async function getMoviesData(locale: string = 'en') {
 
     if (genresError) {
       console.error('Error fetching genres:', genresError)
-      return { latest: [], topRated: [], genres: [], genreMovies: {} }
+      return { latest: [], topRated: [], comingSoon: [], genres: [], genreMovies: {} }
     }
 
     // Fetch genre translations
@@ -55,7 +55,7 @@ async function getMoviesData(locale: string = 'en') {
 
     if (genreTranslationsError) {
       console.error('Error fetching genre translations:', genreTranslationsError)
-      return { latest: [], topRated: [], genres: [], genreMovies: {} }
+      return { latest: [], topRated: [], comingSoon: [], genres: [], genreMovies: {} }
     }
 
     // Create a map of genre translations
@@ -82,7 +82,7 @@ async function getMoviesData(locale: string = 'en') {
 
     if (latestError) {
       console.error('Error fetching latest movies:', latestError)
-      return { latest: [], topRated: [], genres: [], genreMovies: {} }
+      return { latest: [], topRated: [], comingSoon: [], genres: [], genreMovies: {} }
     }
 
     // Fetch top rated movies
@@ -96,13 +96,27 @@ async function getMoviesData(locale: string = 'en') {
 
     if (topRatedError) {
       console.error('Error fetching top rated movies:', topRatedError)
-      return { latest: [], topRated: [], genres: [], genreMovies: {} }
+      return { latest: [], topRated: [], comingSoon: [], genres: [], genreMovies: {} }
+    }
+
+    // Fetch coming soon movies (release date in the future)
+    const { data: comingSoonMovies, error: comingSoonError } = await supabase
+      .from('movies')
+      .select('id, slug, release_date, rating')
+      .gt('release_date', now)
+      .order('release_date', { ascending: true })
+      .limit(10);
+
+    if (comingSoonError) {
+      console.error('Error fetching coming soon movies:', comingSoonError)
+      return { latest: [], topRated: [], comingSoon: [], genres: [], genreMovies: {} }
     }
 
     // Get all movie IDs to fetch translations
     const allMovieIds = [...new Set([
       ...(latestMovies || []).map(m => m.id),
-      ...(topRatedMovies || []).map(m => m.id)
+      ...(topRatedMovies || []).map(m => m.id),
+      ...(comingSoonMovies || []).map(m => m.id)
     ])];
 
     // Fetch translations for all movies
@@ -114,7 +128,7 @@ async function getMoviesData(locale: string = 'en') {
 
     if (translationsError) {
       console.error('Error fetching movie translations:', translationsError)
-      return { latest: [], topRated: [], genres: [], genreMovies: {} }
+      return { latest: [], topRated: [], comingSoon: [], genres: [], genreMovies: {} }
     }
 
     // Create a map of translations
@@ -140,6 +154,7 @@ async function getMoviesData(locale: string = 'en') {
 
     const latest = (latestMovies || []).map(transformMovieData);
     const topRated = (topRatedMovies || []).map(transformMovieData);
+    const comingSoon = (comingSoonMovies || []).map(transformMovieData);
 
     // Get movies for each genre (limit to 5 genres to avoid too many queries)
     const genreMovies: Record<string, Movie[]> = {};
@@ -184,18 +199,26 @@ async function getMoviesData(locale: string = 'en') {
       }
     }
 
-    return { latest, topRated, genres, genreMovies };
+    return { latest, topRated, comingSoon, genres, genreMovies };
   } catch (error) {
     console.error('Error fetching movies data:', error);
-    return { latest: [], topRated: [], genres: [], genreMovies: {} };
+    return { latest: [], topRated: [], comingSoon: [], genres: [], genreMovies: {} };
   }
 }
 
 export async function MovieSections({ locale }: { locale: Locale }) {
-  const { latest, topRated, genres, genreMovies } = await getMoviesData(locale)
+  const { latest, topRated, comingSoon, genres, genreMovies } = await getMoviesData(locale)
 
   return (
     <div className="space-y-12">
+      {comingSoon.length > 0 && (
+        <MovieSlider 
+          title="Coming Soon" 
+          movies={comingSoon} 
+          locale={locale} 
+          viewAllHref={`/movies/coming-soon`}
+        />
+      )}
       <MovieSlider title="Latest Releases" movies={latest} locale={locale} />
       <MovieSlider title="Top Rated" movies={topRated} locale={locale} />
       
