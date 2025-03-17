@@ -135,3 +135,53 @@ export async function performSearch(
     return null
   }
 }
+
+// Analytics event types
+export type AnalyticsEvent = 'click' | 'conversion'
+
+/**
+ * Send an analytics event to Meilisearch
+ * @param event The type of event (click or conversion)
+ * @param queryId The ID of the search query
+ * @param objectIds The IDs of the objects that were interacted with
+ * @param positions The positions of the objects in the search results (only for click events)
+ */
+export async function sendAnalyticsEvent(
+  event: AnalyticsEvent,
+  queryId: string,
+  objectIds: string[],
+  positions?: number[]
+) {
+  try {
+    if (!queryId || !objectIds.length) {
+      console.warn('Missing required parameters for analytics event')
+      return
+    }
+
+    // Construct the event data
+    const eventData: Record<string, any> = {
+      queryId,
+      objectIds,
+    }
+
+    // Add positions for click events
+    if (event === 'click' && positions && positions.length === objectIds.length) {
+      eventData.positions = positions
+    }
+
+    // Send the event to Meilisearch using the new edge URL format
+    await fetch(`https://${process.env.NEXT_PUBLIC_MEILISEARCH_HOST}/events/${event}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY}`,
+      },
+      body: JSON.stringify(eventData),
+    })
+  } catch (error) {
+    console.error(`Error sending ${event} event to Meilisearch:`, error)
+  }
+}
+
+// Export the client for use in other files
+export default client
