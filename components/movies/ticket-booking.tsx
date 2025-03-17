@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
+import { tokenService } from '@/lib/services/token-service';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -35,6 +36,7 @@ interface Theater {
 	name: string;
 	location: string;
 	bigger_id: string;
+	access_code_bigger_picture: string;
 }
 
 interface ShowTime {
@@ -77,6 +79,8 @@ export function TicketBooking({
 	const [theaters, setTheaters] = useState<Theater[]>([]);
 	const [events, setEvents] = useState<any>(null);
 	const [processedEvents, setProcessedEvents] = useState<ProcessedEvents>({});
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	// Type assertion for the translation function
 	const t = useTranslations('booking') as (key: string) => string;
@@ -125,10 +129,11 @@ export function TicketBooking({
 		const fetchTheaters = async () => {
 			const { data, error } = await supabase
 				.from('theaters')
-				.select('id, name, location, bigger_id');
+				.select('id, name, location, bigger_id, access_code_bigger_picture');
 
 			if (error) {
 				console.error('Error fetching theaters:', error);
+				setError('Failed to fetch theaters');
 			} else {
 				setTheaters(data || []);
 			}
@@ -140,24 +145,40 @@ export function TicketBooking({
 	useEffect(() => {
 		if (selectedTheater?.bigger_id && biggerMovieId) {
 			const fetchEvents = async () => {
+				setLoading(true);
+				setError(null);
 				try {
+					// Get valid token for the theater
+					console.log(
+						'Fetching token for theater:',
+						selectedTheater.access_code_bigger_picture
+					);
+					const token = await tokenService.getValidToken(
+						selectedTheater.access_code_bigger_picture
+					);
+					console.log('Received token:', token ? 'Valid token' : 'No token');
+
+					if (!token) {
+						throw new Error('Failed to get valid token');
+					}
+
 					const response = await fetch(
 						`https://pub-api.biggerpicture.ai/mapiAPI/group/events?full=true&siteId=${selectedTheater.bigger_id}&edi=${biggerMovieId}`,
 						{
 							headers: {
-								Authorization:
-									'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhY2Nlc3NDb2RlIjoiWVAiLCJpc3MiOiJhdXRoMCIsImxhbmd1YWdlSWQiOjEsImFudGlDU1JGVG9rZW4iOiI5N2Y2MTFiZS1kYTczLTQyNTUtYmE5NC1mNTZiNWJlMGQwODUiLCJzaXRlSWQiOjk5OCwic2FsZUNoYW5uZWxDb2RlIjoiV0VCIiwic2Vzc2lvbklkIjo0NzAyNjAsImV4cCI6MTc0MjM3OTUxMiwidXNlcklkIjo5MSwidW5pcXVlSWQiOjI1ODExMTY4fQ.cLcvDhWAPB9mxu8cSrgCRAilIChcqTw64v41C3l5sts',
+								Authorization: `Bearer ${token}`,
 								'Content-Type': 'application/json',
 							},
 						}
 					);
 
 					if (!response.ok) {
-						throw new Error(`HTTP error! status: ${response.status}`);
+						const errorText = await response.text();
+						throw new Error(`API error: ${response.status} ${errorText}`);
 					}
 
 					const data = await response.json();
-					console.log('Bigger Picture API Response:', data);
+					console.log('Events API Response:', data);
 
 					if (!data) {
 						throw new Error('No data received from API');
@@ -169,7 +190,10 @@ export function TicketBooking({
 					console.log('Processed Events:', processed);
 				} catch (error) {
 					console.error('Error fetching events:', error);
+					setError('Failed to fetch events: ' + (error as Error).message);
 					setProcessedEvents({});
+				} finally {
+					setLoading(false);
 				}
 			};
 
@@ -280,6 +304,14 @@ export function TicketBooking({
 								</Select>
 							</div>
 
+							{/* Loading and Error States */}
+							{loading && (
+								<div className="text-center text-muted-foreground">
+									Loading events...
+								</div>
+							)}
+							{error && <div className="text-center text-red-500">{error}</div>}
+
 							{/* Date Selection */}
 							<div className="space-y-2">
 								<label className="block text-sm font-medium mb-1">
@@ -298,7 +330,8 @@ export function TicketBooking({
 									}}
 									disabled={
 										!selectedTheater ||
-										Object.keys(processedEvents).length === 0
+										Object.keys(processedEvents).length === 0 ||
+										loading
 									}>
 									<SelectTrigger>
 										<SelectValue placeholder={t('chooseDate')} />
@@ -337,7 +370,7 @@ export function TicketBooking({
 											availableTimes.find((t) => t.id === value) || null
 										);
 									}}
-									disabled={!selectedTheater || !selectedDate}>
+									disabled={!selectedTheater || !selectedDate || loading}>
 									<SelectTrigger>
 										<SelectValue placeholder={t('chooseTime')} />
 									</SelectTrigger>
@@ -362,9 +395,11 @@ export function TicketBooking({
 							{/* Book Button */}
 							<Button
 								className="w-full h-12 text-lg mt-8"
-								disabled={!selectedTheater || !selectedDate || !selectedTime}
+								disabled={
+									!selectedTheater || !selectedDate || !selectedTime || loading
+								}
 								onClick={handleBooking}>
-								{t('bookNow')}
+								{loading ? 'Loading...' : t('bookNow')}
 							</Button>
 						</div>
 					</div>
