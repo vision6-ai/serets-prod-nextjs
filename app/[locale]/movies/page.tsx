@@ -5,6 +5,7 @@ import { MovieGrid } from '@/components/movies/movie-grid'
 import { MovieFilters } from '@/components/movies/movie-filters'
 import { Filters } from '@/hooks/use-infinite-movies'
 import { useTranslations } from 'next-intl'
+import { Locale } from '@/config/i18n'
 
 interface MoviesPageProps {
   params: {
@@ -27,7 +28,7 @@ export default function MoviesPage({ params: { locale } }: MoviesPageProps) {
       <div className="space-y-8">
         <MovieFilters
           onFilterChange={setFilters}
-          locale={locale}
+          locale={locale as Locale}
         />
         
         <MovieGrid
