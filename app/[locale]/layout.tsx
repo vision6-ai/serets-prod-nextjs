@@ -34,6 +34,11 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={getDirection(locale as any)} suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
+      </head>
       <body suppressHydrationWarning>
         <Providers locale={locale} messages={messages}>
           <HeaderClient locale={locale} />

@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   title: 'SERETS.CO.IL - Israeli Movie Database',
   description: 'Discover the best of Israeli cinema. Browse movies and actors.',
   keywords: ['Israeli movies', 'Israeli cinema', 'Hebrew movies', 'Israeli actors'],
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.png', type: 'image/png' }
+    ],
+    apple: { url: '/favicon.png', type: 'image/png' }
+  },
   openGraph: {
     type: 'website',
     url: 'https://serets.co.il',
