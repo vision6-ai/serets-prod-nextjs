@@ -18,6 +18,7 @@ export interface Filters {
   genres: Array<string>
   year?: number | null
   rating?: number | null
+  theaterId?: string | null
   sortBy: 'release_date' | 'rating' | 'title'
   sortOrder: 'asc' | 'desc'
 }
@@ -90,6 +91,21 @@ async function fetchMoviesPage({ pageParam, locale, filters, category }: FetchMo
         .from('movie_genres')
         .select('movie_id')
         .in('genre_id', filters.genres)
+      
+      if (movieIds && movieIds.length > 0) {
+        query = query.in('id', movieIds.map(item => item.movie_id))
+      } else {
+        return { movies: [], nextPage: null, total: 0 }
+      }
+    }
+
+    // Apply theater filter if selected
+    if (filters.theaterId) {
+      const { data: movieIds } = await supabase
+        .from('movie_showtimes')
+        .select('movie_id')
+        .eq('theater_id', filters.theaterId)
+        .is('deleted_at', null)
       
       if (movieIds && movieIds.length > 0) {
         query = query.in('id', movieIds.map(item => item.movie_id))

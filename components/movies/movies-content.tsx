@@ -23,6 +23,7 @@ interface Filters {
   genres: Array<string>
   year?: number | null
   rating?: number | null
+  theaterId?: string | null
   sortBy: 'release_date' | 'rating' | 'title'
   sortOrder: 'asc' | 'desc'
 }
@@ -30,15 +31,22 @@ interface Filters {
 interface MoviesContentProps {
   locale?: Locale
   category?: string
+  filters?: Filters
+  onFilterChange?: (filters: Filters) => void
 }
 
-export function MoviesContent({ locale = 'en', category: propCategory }: MoviesContentProps) {
+export function MoviesContent({ 
+  locale = 'en', 
+  category: propCategory, 
+  filters: propFilters,
+  onFilterChange: propsFilterChange 
+}: MoviesContentProps) {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
   const supabase = createClientComponentClient()
   
-  const currentFilters = useRef<Filters>({
+  const currentFilters = useRef<Filters>(propFilters || {
     genres: Array<string>(),
     sortBy: 'release_date',
     sortOrder: 'desc'
@@ -184,19 +192,21 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
     }
   }, [category, supabase, locale])
 
+  // Update movies when filters change or component mounts
   useEffect(() => {
-    const initialFilters: Filters = {
-      genres: [],
-      sortBy: category === 'top-rated' ? 'rating' : 'release_date',
-      sortOrder: category === 'coming-soon' ? 'asc' : 'desc'
+    if (propFilters) {
+      fetchMovies(propFilters)
+    } else {
+      fetchMovies(currentFilters.current)
     }
-
-    fetchMovies(initialFilters)
-  }, [category, fetchMovies])
+  }, [fetchMovies, propFilters])
 
   return (
     <div className="space-y-8">
-      <MovieFilters onFilterChange={fetchMovies} locale={locale} />
+      <MovieFilters 
+        onFilterChange={propsFilterChange || fetchMovies} 
+        locale={locale} 
+      />
       <div className="min-h-[400px]">
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

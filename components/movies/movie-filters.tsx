@@ -13,10 +13,17 @@ import {
 } from "@/components/ui/popover"
 import { Locale } from '@/config/i18n'
 import { cn } from '@/lib/utils'
+import { TheaterFilterSelect } from '@/components/ui/theater-filter-select'
 
 interface Genre {
   id: string
   name: string
+}
+
+interface Theater {
+  id: string
+  name: string
+  location: string
 }
 
 interface MovieFiltersProps {
@@ -27,20 +34,24 @@ interface MovieFiltersProps {
 export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
   const t = useTranslations('movies')
   const [genres, setGenres] = useState<Genre[]>([])
+  const [theaters, setTheaters] = useState<Theater[]>([])
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
+  const [selectedTheater, setSelectedTheater] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'release_date' | 'rating' | 'title'>('release_date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   // Check if any filters are active
-  const hasActiveFilters = selectedGenres.length > 0 || selectedYear !== null || selectedRating !== null
+  const hasActiveFilters = selectedGenres.length > 0 || selectedYear !== null || 
+                          selectedRating !== null || selectedTheater !== null
 
   // Clear all filters
   const clearFilters = () => {
     setSelectedGenres([])
     setSelectedYear(null)
     setSelectedRating(null)
+    setSelectedTheater(null)
     setSortBy('release_date')
     setSortOrder('desc')
   }
@@ -68,16 +79,34 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
     fetchGenres()
   }, [locale])
 
+  // Fetch theaters
+  useEffect(() => {
+    const fetchTheaters = async () => {
+      const supabase = createClientComponentClient()
+      const { data } = await supabase
+        .from('theaters')
+        .select('id, name, location')
+        .order('name')
+      
+      if (data) {
+        setTheaters(data)
+      }
+    }
+
+    fetchTheaters()
+  }, [])
+
   // Update filters when any selection changes
   useEffect(() => {
     onFilterChange({
       genres: selectedGenres,
       year: selectedYear,
       rating: selectedRating,
+      theaterId: selectedTheater,
       sortBy,
       sortOrder,
     })
-  }, [selectedGenres, selectedYear, selectedRating, sortBy, sortOrder, onFilterChange])
+  }, [selectedGenres, selectedYear, selectedRating, selectedTheater, sortBy, sortOrder, onFilterChange])
 
   // Generate year options (from current year + 1 to 10 years back)
   const currentYear = new Date().getFullYear()
@@ -120,6 +149,14 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
           </PopoverContent>
         </Popover>
 
+        {/* Theater Filter */}
+        <TheaterFilterSelect
+          theaters={theaters}
+          selectedTheaterId={selectedTheater}
+          onTheaterChange={setSelectedTheater}
+          placeholder={t('filters.theaters')}
+        />
+
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -127,32 +164,28 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
               size="lg"
               className="w-full bg-background hover:bg-accent text-sm sm:text-base px-3 sm:px-4 h-10 sm:h-11"
             >
-              <span className="truncate">
-                {selectedYear ? `${selectedYear}` : t('filters.all_years')}
-              </span>
+              <span className="truncate">{t('filters.year')}</span>
               <ChevronDown className="h-4 w-4 ml-1 flex-shrink-0" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-48 p-0">
-            <div className="flex flex-col">
-              <div className="px-4 py-3 font-medium">{t('filters.select_year')}</div>
-              <Button
-                variant="ghost"
-                className="justify-between rounded-none h-11 px-4 font-normal"
-                onClick={() => setSelectedYear(null)}
-              >
-                {t('filters.all_years')}
-                {!selectedYear && <Check className="h-4 w-4 ml-2" />}
-              </Button>
+          <PopoverContent className="w-[280px] sm:w-80">
+            <div className="grid grid-cols-2 gap-2">
               {years.map((year) => (
                 <Button
                   key={year}
-                  variant="ghost"
-                  className="justify-between rounded-none h-11 px-4 font-normal"
-                  onClick={() => setSelectedYear(year)}
+                  variant={selectedYear === year ? "default" : "outline"}
+                  className="justify-start text-sm"
+                  onClick={() => {
+                    setSelectedYear(selectedYear === year ? null : year)
+                  }}
                 >
-                  {year}
-                  {selectedYear === year && <Check className="h-4 w-4 ml-2" />}
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedYear === year ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span className="truncate">{year}</span>
                 </Button>
               ))}
             </div>
@@ -166,29 +199,28 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
               size="lg"
               className="w-full bg-background hover:bg-accent text-sm sm:text-base px-3 sm:px-4 h-10 sm:h-11"
             >
-              <span className="truncate">
-                {selectedRating ? `${selectedRating}+` : t('filters.rating')}
-              </span>
+              <span className="truncate">{t('filters.rating')}</span>
               <ChevronDown className="h-4 w-4 ml-1 flex-shrink-0" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-48">
-            <div className="flex flex-col gap-1">
-              <Button
-                variant={!selectedRating ? "default" : "outline"}
-                className="justify-start"
-                onClick={() => setSelectedRating(null)}
-              >
-                {t('filters.any_rating')}
-              </Button>
+          <PopoverContent className="w-[280px] sm:w-80">
+            <div className="grid grid-cols-2 gap-2">
               {[9, 8, 7, 6, 5].map((rating) => (
                 <Button
                   key={rating}
                   variant={selectedRating === rating ? "default" : "outline"}
-                  className="justify-start"
-                  onClick={() => setSelectedRating(rating)}
+                  className="justify-start text-sm"
+                  onClick={() => {
+                    setSelectedRating(selectedRating === rating ? null : rating)
+                  }}
                 >
-                  {rating.toFixed(1)}+ ⭐️
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedRating === rating ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span className="truncate">{rating}+</span>
                 </Button>
               ))}
             </div>
@@ -202,43 +234,91 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
               size="lg"
               className="w-full bg-background hover:bg-accent text-sm sm:text-base px-3 sm:px-4 h-10 sm:h-11"
             >
-              <span className="truncate">{t('filters.sort_by')}</span>
+              <span className="truncate">{t('filters.sortBy')}</span>
               <ChevronDown className="h-4 w-4 ml-1 flex-shrink-0" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-48">
-            <div className="flex flex-col gap-1">
-              {[
-                { value: 'release_date', label: t('filters.release_date') },
-                { value: 'rating', label: t('filters.rating') },
-                { value: 'title', label: t('filters.title') }
-              ].map((option) => (
+          <PopoverContent className="w-[280px] sm:w-80">
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2">
                 <Button
-                  key={option.value}
-                  variant={sortBy === option.value ? "default" : "outline"}
-                  className="justify-start"
+                  variant={sortBy === 'release_date' ? "default" : "outline"}
+                  className="justify-start text-sm"
                   onClick={() => {
-                    setSortBy(option.value as typeof sortBy)
+                    if (sortBy === 'release_date') {
+                      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')
+                    } else {
+                      setSortBy('release_date')
+                      setSortOrder('desc')
+                    }
                   }}
                 >
-                  {option.label}
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      sortBy === 'release_date' ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span className="truncate">{t('filters.sortByDate')}</span>
+                  {sortBy === 'release_date' && (
+                    <span className="ml-auto text-xs opacity-60">
+                      {sortOrder === 'desc' ? t('filters.newest') : t('filters.oldest')}
+                    </span>
+                  )}
                 </Button>
-              ))}
-              <div className="border-t my-2" />
-              <Button
-                variant={sortOrder === 'desc' ? "default" : "outline"}
-                className="justify-start"
-                onClick={() => setSortOrder('desc')}
-              >
-                {t('filters.descending')}
-              </Button>
-              <Button
-                variant={sortOrder === 'asc' ? "default" : "outline"}
-                className="justify-start"
-                onClick={() => setSortOrder('asc')}
-              >
-                {t('filters.ascending')}
-              </Button>
+
+                <Button
+                  variant={sortBy === 'rating' ? "default" : "outline"}
+                  className="justify-start text-sm"
+                  onClick={() => {
+                    if (sortBy === 'rating') {
+                      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')
+                    } else {
+                      setSortBy('rating')
+                      setSortOrder('desc')
+                    }
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      sortBy === 'rating' ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span className="truncate">{t('filters.sortByRating')}</span>
+                  {sortBy === 'rating' && (
+                    <span className="ml-auto text-xs opacity-60">
+                      {sortOrder === 'desc' ? t('filters.highest') : t('filters.lowest')}
+                    </span>
+                  )}
+                </Button>
+
+                <Button
+                  variant={sortBy === 'title' ? "default" : "outline"}
+                  className="justify-start text-sm"
+                  onClick={() => {
+                    if (sortBy === 'title') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                    } else {
+                      setSortBy('title')
+                      setSortOrder('asc')
+                    }
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      sortBy === 'title' ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span className="truncate">{t('filters.sortByTitle')}</span>
+                  {sortBy === 'title' && (
+                    <span className="ml-auto text-xs opacity-60">
+                      {sortOrder === 'asc' ? t('filters.aToZ') : t('filters.zToA')}
+                    </span>
+                  )}
+                </Button>
+              </div>
             </div>
           </PopoverContent>
         </Popover>
