@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
-	Dialog,
+	Dialog as DialogRoot,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
@@ -60,12 +60,6 @@ export function TicketBooking({
 	isRtl = false,
 	countitPid,
 }: TicketBookingProps) {
-	console.log('Component rendered with:', {
-		movieId,
-		movieTitle,
-		countitPid,
-	});
-
 	const locale = useLocale();
 	const [open, setOpen] = useState(false);
 	const [showIframe, setShowIframe] = useState(false);
@@ -83,7 +77,6 @@ export function TicketBooking({
 
 	// Function to fetch available cities
 	const fetchCities = useCallback(async () => {
-		console.log('Fetching available cities for movie:', countitPid);
 		try {
 			const response = await fetch(`/api/movieshows?moviepid=${countitPid}`);
 			if (!response.ok) {
@@ -94,15 +87,15 @@ export function TicketBooking({
 				throw new Error(data.error || 'Invalid response format');
 			}
 
-			// Get unique cities from shows and ensure they are strings
-			const cities: string[] = Array.from(
+			// Get unique cities from shows
+			const cities = Array.from(
 				new Set(
-					data.data
-						.filter((show: MovieShow) => typeof show.city === 'string')
-						.map((show: MovieShow) => show.city)
+					(data.data as MovieShow[])
+						.filter((show) => show.city)
+						.map((show) => show.city)
 				)
 			).sort();
-			console.log('Available cities:', cities);
+
 			setAvailableCities(cities);
 
 			// Auto-select city if only one available
@@ -117,7 +110,6 @@ export function TicketBooking({
 
 	// Function to process shows data by date
 	const processShows = (shows: MovieShow[]) => {
-		console.log('Processing shows:', shows.length);
 		const processed: ProcessedShows = {};
 
 		shows.forEach((show) => {
@@ -133,26 +125,12 @@ export function TicketBooking({
 			processed[date].sort((a, b) => a.time.localeCompare(b.time));
 		});
 
-		console.log('Processed shows by date:', {
-			dates: Object.keys(processed),
-			totalDates: Object.keys(processed).length,
-			showsPerDate: Object.entries(processed).map(([date, shows]) => ({
-				date,
-				count: shows.length,
-			})),
-		});
-
 		return processed;
 	};
 
 	const fetchMovieShows = useCallback(async () => {
 		if (!selectedCity) return;
 
-		console.log('Fetching movie shows for:', {
-			countitPid,
-			selectedCity,
-			refreshing,
-		});
 		setLoading(true);
 		setError(null);
 		try {
@@ -162,34 +140,24 @@ export function TicketBooking({
 
 			// First, trigger a refresh of the data from the external API
 			if (!refreshing) {
-				console.log('Triggering external API refresh...');
 				setRefreshing(true);
-				const refreshResponse = await fetch('/api/movieshows?fetchAll=true');
-				console.log('External API refresh status:', refreshResponse.status);
+				await fetch('/api/movieshows?fetchAll=true');
 				setRefreshing(false);
 			}
 
 			// Then fetch the latest data for this movie and city
-			console.log('Fetching movie-specific data...');
 			const response = await fetch(
 				`/api/movieshows?moviepid=${countitPid}&city=${encodeURIComponent(
 					selectedCity
 				)}`
 			);
-			console.log('Movie data fetch status:', response.status);
 
 			if (!response.ok) {
 				const errorData = await response.json();
-				console.error('API error response:', errorData);
 				throw new Error(errorData.details || 'Failed to fetch movie shows');
 			}
 
 			const data = await response.json();
-			console.log('API response:', {
-				success: data.success,
-				dataLength: data.data?.length,
-				firstShow: data.data?.[0],
-			});
 
 			if (!data.success || !Array.isArray(data.data)) {
 				throw new Error(data.error || 'Invalid response format');
@@ -202,14 +170,7 @@ export function TicketBooking({
 				return showDate >= now;
 			});
 
-			console.log('Filtered shows:', {
-				total: data.data.length,
-				filtered: filteredShows.length,
-				removed: data.data.length - filteredShows.length,
-			});
-
 			if (filteredShows.length === 0) {
-				console.log('No upcoming shows available');
 				setError('No upcoming shows available');
 				setMovieShows([]);
 				setProcessedShows({});
@@ -225,7 +186,6 @@ export function TicketBooking({
 				const earliestDate = new Date(
 					Object.keys(processed)[0].replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')
 				);
-				console.log('Auto-selecting earliest date:', earliestDate);
 				setSelectedDate(earliestDate);
 			}
 		} catch (error) {
@@ -239,12 +199,10 @@ export function TicketBooking({
 	}, [countitPid, selectedCity, refreshing, selectedDate]);
 
 	useEffect(() => {
-		console.log('Dialog state changed:', { open, countitPid });
 		if (open && countitPid) {
 			fetchCities();
 		} else {
 			// Reset states when dialog is closed
-			console.log('Resetting states on dialog close');
 			setSelectedCity(null);
 			setSelectedDate(null);
 			setSelectedShow(null);
@@ -263,113 +221,253 @@ export function TicketBooking({
 
 	const handleBooking = () => {
 		if (selectedShow) {
-			console.log('Opening booking link in iframe:', {
-				showtime_pid: selectedShow.showtime_pid,
-				deep_link: selectedShow.deep_link,
-			});
 			setShowIframe(true);
 		}
 	};
 
-	// Add console log for city selection
-	const handleCityChange = (value: string): void => {
-		console.log('City selected:', value);
+	const handleCityChange = (value: string) => {
 		setSelectedCity(value);
 		setSelectedDate(null);
 		setSelectedShow(null);
 	};
 
-	// Add console log for date selection
-	const handleDateChange = (value: string): void => {
-		console.log('Date selected:', value);
+	const handleDateChange = (value: string) => {
 		const year = value.substring(0, 4);
 		const month = value.substring(4, 6);
 		const day = value.substring(6, 8);
 		const newDate = new Date(`${year}-${month}-${day}`);
-		console.log('Parsed date:', newDate);
 		setSelectedDate(newDate);
-		setSelectedShow(null); // Reset selected show when date changes
+		setSelectedShow(null);
 	};
 
-	// Add console log for show selection
-	const handleShowSelection = (value: string): void => {
-		console.log('Show selected:', value);
+	const handleShowSelection = (value: string) => {
 		const dateKey = selectedDate ? format(selectedDate, 'yyyyMMdd') : '';
 		const availableShows = processedShows[dateKey] || [];
 		const show = availableShows.find(
 			(s) => s.showtime_pid.toString() === value
 		);
-		console.log('Selected show details:', show);
 		setSelectedShow(show || null);
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button
-					size="lg"
-					className={cn(
-						'w-full md:w-auto text-lg gap-2 h-12',
-						'transition-all duration-200 hover:scale-105',
-						'shadow-lg hover:shadow-xl'
-					)}>
-					<Ticket className="w-5 h-5" />
-					{t('orderTickets')}
-				</Button>
-			</DialogTrigger>
+		<>
+			<DialogRoot open={open} onOpenChange={setOpen}>
+				<DialogTrigger asChild>
+					<Button
+						size="lg"
+						className={cn(
+							'w-full md:w-auto text-lg gap-2 h-12',
+							'transition-all duration-200 hover:scale-105',
+							'shadow-lg hover:shadow-xl'
+						)}>
+						<Ticket className="w-5 h-5" />
+						{t('orderTickets')}
+					</Button>
+				</DialogTrigger>
 
-			<DialogContent
-				className={cn(
-					'sm:max-w-[600px]',
-					showIframe && 'sm:max-w-[900px] h-[80vh]'
-				)}>
-				{!showIframe ? (
-					<>
-						<DialogHeader className="space-y-4">
-							<div className="flex items-center gap-2">
-								<DialogClose asChild>
-									<Button variant="ghost" size="icon" className="shrink-0">
-										<ChevronLeft className="h-4 w-4" />
-										<span className="sr-only">Back</span>
+				<DialogContent
+					className={cn(
+						'sm:max-w-[600px]',
+						showIframe && 'sm:max-w-[900px] h-[80vh]'
+					)}>
+					{!showIframe ? (
+						<>
+							<DialogHeader className="space-y-4">
+								<div className="flex items-center gap-2">
+									<DialogClose asChild>
+										<Button variant="ghost" size="icon" className="shrink-0">
+											<ChevronLeft className="h-4 w-4" />
+											<span className="sr-only">Back</span>
+										</Button>
+									</DialogClose>
+									<DialogTitle className="text-xl flex-1">
+										{movieTitle}
+									</DialogTitle>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="shrink-0"
+										onClick={() => fetchMovieShows()}
+										disabled={loading || refreshing}>
+										<RefreshCw
+											className={cn('h-4 w-4', loading && 'animate-spin')}
+										/>
+										<span className="sr-only">Refresh</span>
 									</Button>
-								</DialogClose>
-								<DialogTitle className="text-xl flex-1">
-									{movieTitle}
-								</DialogTitle>
+								</div>
+							</DialogHeader>
+
+							<div className="grid md:grid-cols-[150px,1fr] gap-6 pt-4">
+								{/* Movie Poster */}
+								<div className="hidden md:block">
+									<div className="aspect-[2/3] relative rounded-lg overflow-hidden bg-muted">
+										{posterUrl ? (
+											<Image
+												src={posterUrl}
+												alt={movieTitle}
+												fill
+												className="object-cover"
+											/>
+										) : (
+											<div className="absolute inset-0 flex items-center justify-center p-4 text-center text-muted-foreground">
+												<span>{movieTitle}</span>
+											</div>
+										)}
+									</div>
+								</div>
+
+								{/* Booking Form */}
+								<div className="space-y-6">
+									{/* Loading and Error States */}
+									{loading && (
+										<div className="text-center text-muted-foreground">
+											Loading showtimes...
+										</div>
+									)}
+									{error && (
+										<div className="text-center text-red-500">{error}</div>
+									)}
+
+									{/* City Selection */}
+									<div className="space-y-2">
+										<label className="block text-sm font-medium mb-1">
+											{t('selectCity')}
+										</label>
+										<Select
+											value={selectedCity || undefined}
+											onValueChange={handleCityChange}
+											disabled={availableCities.length === 0 || loading}>
+											<SelectTrigger>
+												<SelectValue placeholder={t('chooseCity')} />
+											</SelectTrigger>
+											<SelectContent>
+												{availableCities.map((city) => (
+													<SelectItem key={city} value={city}>
+														{city}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+
+									{selectedCity && (
+										<>
+											{/* Date Selection */}
+											<div className="space-y-2">
+												<label className="block text-sm font-medium mb-1">
+													{t('selectDate')}
+												</label>
+												<Select
+													value={
+														selectedDate
+															? format(selectedDate, 'yyyyMMdd')
+															: undefined
+													}
+													onValueChange={handleDateChange}
+													disabled={
+														Object.keys(processedShows).length === 0 || loading
+													}>
+													<SelectTrigger>
+														<SelectValue placeholder={t('chooseDate')} />
+													</SelectTrigger>
+													<SelectContent>
+														{Object.keys(processedShows)
+															.sort()
+															.map((dateStr) => {
+																const year = dateStr.substring(0, 4);
+																const month = dateStr.substring(4, 6);
+																const day = dateStr.substring(6, 8);
+																const date = new Date(
+																	`${year}-${month}-${day}`
+																);
+																return (
+																	<SelectItem key={dateStr} value={dateStr}>
+																		{format(date, 'EEEE, MMMM d')}
+																	</SelectItem>
+																);
+															})}
+													</SelectContent>
+												</Select>
+											</div>
+
+											{/* Show Selection */}
+											<div className="space-y-2">
+												<label className="block text-sm font-medium mb-1">
+													{t('selectTime')}
+												</label>
+												<Select
+													value={selectedShow?.showtime_pid.toString()}
+													onValueChange={handleShowSelection}
+													disabled={!selectedDate || loading}>
+													<SelectTrigger className="w-full h-[80px]">
+														<SelectValue
+															placeholder={t('chooseTime')}
+															className="text-base"
+														/>
+													</SelectTrigger>
+													<SelectContent className="w-[400px] max-h-[400px]">
+														{selectedDate &&
+															processedShows[
+																format(selectedDate, 'yyyyMMdd')
+															]?.map((show) => (
+																<SelectItem
+																	key={show.showtime_pid}
+																	value={show.showtime_pid.toString()}
+																	className="py-3 h-[90px]">
+																	<div className="flex flex-col gap-2 w-full">
+																		<div className="text-sm font-medium text-left line-clamp-2">
+																			<span className="text-base font-medium pr-2">
+																				{show.time.substring(0, 5)}
+																			</span>
+																			{show.movie_name}
+																		</div>
+																		<div className="flex justify-between items-center gap-4">
+																			<span className="text-xs text-muted-foreground">
+																				{show.city} - {show.cinema}
+																			</span>
+																		</div>
+																	</div>
+																</SelectItem>
+															))}
+													</SelectContent>
+												</Select>
+											</div>
+
+											<Button
+												className="w-full h-12 text-lg mt-8"
+												disabled={!selectedShow || loading}
+												onClick={handleBooking}>
+												{loading ? 'Loading...' : t('bookNow')}
+											</Button>
+										</>
+									)}
+								</div>
+							</div>
+						</>
+					) : (
+						<div className="relative h-full">
+							<div className="absolute top-2 left-2 z-10">
 								<Button
 									variant="ghost"
 									size="icon"
-									className="shrink-0"
-									onClick={() => fetchMovieShows()}
-									disabled={loading || refreshing}>
-									<RefreshCw
-										className={cn('h-4 w-4', loading && 'animate-spin')}
-									/>
-									<span className="sr-only">Refresh</span>
+									onClick={() => setShowIframe(false)}
+									className="bg-white/90 hover:bg-white shadow-md">
+									<ChevronLeft className="h-4 w-4" />
+									<span className="sr-only">Back to showtimes</span>
 								</Button>
 							</div>
-						</DialogHeader>
-
-						<div className="grid md:grid-cols-[150px,1fr] gap-6 pt-4">
-							{/* Movie Poster */}
-							<div className="hidden md:block">
-								<div className="aspect-[2/3] relative rounded-lg overflow-hidden bg-muted">
-									{posterUrl ? (
-										<Image
-											src={posterUrl}
-											alt={movieTitle}
-											fill
-											className="object-cover"
-										/>
-									) : (
-										<div className="absolute inset-0 flex items-center justify-center p-4 text-center text-muted-foreground">
-											<span>{movieTitle}</span>
-										</div>
-									)}
-								</div>
+							{selectedShow && (
+								<iframe
+									src={selectedShow.deep_link}
+									className="w-full h-full rounded-lg"
+									allow="payment"
+									title="Ticket Booking"
+								/>
 							)}
 						</div>
-					</div>
+					)}
+				</DialogContent>
+			</DialogRoot>
 
 			{/* Mobile Sticky Button */}
 			<div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t z-50">
@@ -379,273 +477,13 @@ export function TicketBooking({
 						'w-full gap-2 h-10',
 						'transition-all duration-300',
 						'shadow-lg',
-						'bg-gradient-to-r from-[#EE9FF7] to-[#FC660C] hover:brightness-105 text-white',
-						buttonAnimated && 'animate-attention'
+						'bg-gradient-to-r from-[#EE9FF7] to-[#FC660C] hover:brightness-105 text-white'
 					)}
 					onClick={() => setOpen(true)}>
 					<Ticket className="w-4 h-4" />
 					{t('orderTickets')}
 				</Button>
 			</div>
-
-			{/* Booking Iframe Dialog */}
-			<Dialog open={showIframe} onOpenChange={setShowIframe}>
-				<DialogContent className="sm:max-w-[900px] sm:h-[800px] p-0">
-					<DialogHeader className="p-4 pb-0">
-						<div className="flex items-center justify-between">
-							<DialogTitle className="text-xl">{movieTitle}</DialogTitle>
-							<DialogClose asChild>
-								<Button variant="ghost" size="icon" className="shrink-0">
-									<ChevronLeft className="h-4 w-4" />
-									<span className="sr-only">Close</span>
-								</Button>
-							</DialogClose>
-						</div>
-					</DialogHeader>
-					<div className="h-full">
-						{selectedTheater && selectedTime && (
-							<iframe
-								src={`https://ecom.biggerpicture.ai/site/${
-									selectedTheater.bigger_id
-								}/tickets?languageId=${
-									locale === 'he' ? 'he-IL' : 'en-US'
-								}&saleChannelCode=WEB&code=${selectedTime.eventCode}`}
-								className="w-full h-[700px] border-0"
-								allow="payment"
-							/>
-						)}
-						{error && <div className="text-center text-red-500">{error}</div>}
-
-						{/* Date Selection */}
-						<div className="space-y-2">
-							<label className="block text-sm font-medium mb-1">
-								{t('selectDate')}
-							</label>
-							<Select
-								value={
-									selectedDate ? format(selectedDate, 'yyyyMMdd') : undefined
-								}
-								onValueChange={(value) => {
-									const year = value.substring(0, 4);
-									const month = value.substring(4, 6);
-									const day = value.substring(6, 8);
-									setSelectedDate(new Date(`${year}-${month}-${day}`));
-									setSelectedShow(null); // Reset selected show when date changes
-								}}
-								disabled={Object.keys(processedShows).length === 0 || loading}>
-								<SelectTrigger>
-									<SelectValue placeholder={t('chooseDate')} />
-								</SelectTrigger>
-								<SelectContent>
-									{Object.keys(processedShows)
-										.sort()
-										.map((dateStr) => {
-											const year = dateStr.substring(0, 4);
-											const month = dateStr.substring(4, 6);
-											const day = dateStr.substring(6, 8);
-											const date = new Date(`${year}-${month}-${day}`);
-											return (
-												<SelectItem key={dateStr} value={dateStr}>
-													{format(date, 'EEEE, MMMM d')}
-												</SelectItem>
-											);
-										})}
-								</SelectContent>
-							</Select>
-						</div>
-
-						{/* Show Selection */}
-						<div className="space-y-2">
-							<label className="block text-sm font-medium mb-1">
-								{t('selectTime')}
-							</label>
-							<Select
-								value={selectedShow?.showtime_pid.toString()}
-								onValueChange={(value) => {
-									const dateKey = selectedDate
-										? format(selectedDate, 'yyyyMMdd')
-										: '';
-									const availableShows = processedShows[dateKey] || [];
-									setSelectedShow(
-										availableShows.find(
-											(s) => s.showtime_pid.toString() === value
-										) || null
-									);
-								}}
-								disabled={!selectedDate || loading}>
-								<SelectTrigger>
-									<SelectValue placeholder={t('chooseTime')} />
-								</SelectTrigger>
-								<SelectContent>
-									{selectedDate &&
-										processedShows[format(selectedDate, 'yyyyMMdd')]?.map(
-											(show) => (
-												<SelectItem
-													key={show.showtime_pid}
-													value={show.showtime_pid.toString()}>
-													<div className="flex justify-between items-center gap-4">
-														<span>{show.time}</span>
-														<div className="text-xs text-muted-foreground">
-															{show.cinema} - {show.city}
-														</div>
-													</div>
-												</div>
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-
-							{/* Booking Form */}
-							<div className="space-y-6">
-								{/* Loading and Error States */}
-								{loading && (
-									<div className="text-center text-muted-foreground">
-										Loading showtimes...
-									</div>
-								)}
-								{error && (
-									<div className="text-center text-red-500">{error}</div>
-								)}
-
-								{/* City Selection */}
-								<div className="space-y-2">
-									<label className="block text-sm font-medium mb-1">
-										{t('selectCity')}
-									</label>
-									<Select
-										value={selectedCity || undefined}
-										onValueChange={handleCityChange}
-										disabled={availableCities.length === 0 || loading}>
-										<SelectTrigger>
-											<SelectValue placeholder={t('chooseCity')} />
-										</SelectTrigger>
-										<SelectContent>
-											{availableCities.map((city) => (
-												<SelectItem key={city} value={city}>
-													{city}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-
-								{selectedCity && (
-									<>
-										{/* Date Selection */}
-										<div className="space-y-2">
-											<label className="block text-sm font-medium mb-1">
-												{t('selectDate')}
-											</label>
-											<Select
-												value={
-													selectedDate
-														? format(selectedDate, 'yyyyMMdd')
-														: undefined
-												}
-												onValueChange={handleDateChange}
-												disabled={
-													Object.keys(processedShows).length === 0 || loading
-												}>
-												<SelectTrigger>
-													<SelectValue placeholder={t('chooseDate')} />
-												</SelectTrigger>
-												<SelectContent>
-													{Object.keys(processedShows)
-														.sort()
-														.map((dateStr) => {
-															const year = dateStr.substring(0, 4);
-															const month = dateStr.substring(4, 6);
-															const day = dateStr.substring(6, 8);
-															const date = new Date(`${year}-${month}-${day}`);
-															return (
-																<SelectItem key={dateStr} value={dateStr}>
-																	{format(date, 'EEEE, MMMM d')}
-																</SelectItem>
-															);
-														})}
-												</SelectContent>
-											</Select>
-										</div>
-
-										{/* Show Selection */}
-										<div className="space-y-2">
-											<label className="block text-sm font-medium mb-1">
-												{t('selectTime')}
-											</label>
-											<Select
-												value={selectedShow?.showtime_pid.toString()}
-												onValueChange={handleShowSelection}
-												disabled={!selectedDate || loading}>
-												<SelectTrigger className="w-full h-[80px]">
-													<SelectValue
-														placeholder={t('chooseTime')}
-														className="text-base"
-													/>
-												</SelectTrigger>
-												<SelectContent className="w-[400px] max-h-[400px]">
-													{selectedDate &&
-														processedShows[
-															format(selectedDate, 'yyyyMMdd')
-														]?.map((show) => (
-															<SelectItem
-																key={show.showtime_pid}
-																value={show.showtime_pid.toString()}
-																className="py-3 h-[90px]">
-																<div className="flex flex-col gap-2 w-full flex-start">
-																	<div className="text-sm font-medium text-left line-clamp-2">
-																		<span className="text-base font-medium pr-2">
-																			{show.time.substring(0, 5)}
-																		</span>
-																		{show.movie_name}
-																	</div>
-																	<div className="flex justify-between items-center gap-4">
-																		{/* <span className="text-base font-medium">
-																			{show.time.substring(0, 5)}
-																		</span> */}
-																		<span className="text-xs text-muted-foreground">
-																			{show.city}- {show.cinema}
-																		</span>
-																	</div>
-																</div>
-															</SelectItem>
-														))}
-												</SelectContent>
-											</Select>
-										</div>
-
-										<Button
-											className="w-full h-12 text-lg mt-8"
-											disabled={!selectedShow || loading}
-											onClick={handleBooking}>
-											{loading ? 'Loading...' : t('bookNow')}
-										</Button>
-									</>
-								)}
-							</div>
-						</div>
-					</>
-				) : (
-					<div className="relative h-full">
-						<div className="absolute top-2 left-2 z-10">
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={() => setShowIframe(false)}
-								className="bg-white/90 hover:bg-white shadow-md">
-								<ChevronLeft className="h-4 w-4" />
-								<span className="sr-only">Back to showtimes</span>
-							</Button>
-						</div>
-						<iframe
-							src={selectedShow?.deep_link}
-							className="w-full h-full rounded-lg"
-							allow="payment"
-							title="Ticket Booking"
-						/>
-					</div>
-				)}
-			</DialogContent>
-		</Dialog>
+		</>
 	);
 }
