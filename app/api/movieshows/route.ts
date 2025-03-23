@@ -145,11 +145,12 @@ export async function GET(request: NextRequest) {
 			});
 
 			if (error) {
-				logger.error('Database query failed', {
-					error: error.message,
-					code: error.code,
-					details: error.details,
-					hint: error.hint,
+				const dbError = new Error('Database query failed');
+				logger.error('Database query failed', dbError, {
+					errorMessage: error.message,
+					errorCode: error.code,
+					errorDetails: error.details,
+					errorHint: error.hint,
 					moviepid,
 					city,
 					timestamp: new Date().toISOString(),
@@ -199,11 +200,12 @@ export async function GET(request: NextRequest) {
 			});
 
 			if (error) {
-				logger.error('Cities fetch failed', {
-					error: error.message,
-					code: error.code,
-					details: error.details,
-					hint: error.hint,
+				const dbError = new Error('Cities fetch failed');
+				logger.error('Cities fetch failed', dbError, {
+					errorMessage: error.message,
+					errorCode: error.code,
+					errorDetails: error.details,
+					errorHint: error.hint,
 					moviepid,
 					timestamp: new Date().toISOString(),
 				});
@@ -247,8 +249,9 @@ export async function GET(request: NextRequest) {
 			});
 
 			if (!showtimesData || !Array.isArray(showtimesData)) {
-				logger.error('Invalid API response structure', {
-					responseType: typeof showtimesData,
+				const apiError = new Error('Invalid API response structure');
+				logger.error('Invalid API response structure', apiError, {
+					dataType: typeof showtimesData,
 					isArray: Array.isArray(showtimesData),
 					timestamp: new Date().toISOString(),
 				});
@@ -291,9 +294,10 @@ export async function GET(request: NextRequest) {
 							.single();
 
 					if (checkError && checkError.code !== 'PGRST116') {
-						logger.error('Existence check failed', {
-							error: checkError.message,
-							code: checkError.code,
+						const existenceError = new Error('Existence check failed');
+						logger.error('Existence check failed', existenceError, {
+							errorMessage: checkError.message,
+							errorCode: checkError.code,
 							showtime_pid: showtime.SHOWTIME_PID,
 							timestamp: new Date().toISOString(),
 						});
@@ -333,10 +337,11 @@ export async function GET(request: NextRequest) {
 						});
 
 					if (insertError) {
-						logger.error('Insert operation failed', {
-							error: insertError.message,
-							code: insertError.code,
-							details: insertError.details,
+						const insertionError = new Error('Insert operation failed');
+						logger.error('Insert operation failed', insertionError, {
+							errorMessage: insertError.message,
+							errorCode: insertError.code,
+							errorDetails: insertError.details,
 							showtime_pid: showtime.SHOWTIME_PID,
 							timestamp: new Date().toISOString(),
 						});
@@ -354,10 +359,12 @@ export async function GET(request: NextRequest) {
 					});
 					results.success++;
 				} catch (error) {
-					logger.error('Showtime processing error', {
-						error: error instanceof Error ? error.message : 'Unknown error',
+					const processingError = new Error('Showtime processing error');
+					logger.error('Showtime processing error', processingError, {
+						errorMessage:
+							error instanceof Error ? error.message : 'Unknown error',
 						showtime_pid: showtime.SHOWTIME_PID,
-						stack: error instanceof Error ? error.stack : undefined,
+						errorStack: error instanceof Error ? error.stack : undefined,
 						timestamp: new Date().toISOString(),
 					});
 					results.failed++;
@@ -397,9 +404,10 @@ export async function GET(request: NextRequest) {
 			{ status: 400 }
 		);
 	} catch (error) {
-		logger.error('Unhandled error in GET handler', {
-			error: error instanceof Error ? error.message : 'Unknown error',
-			stack: error instanceof Error ? error.stack : undefined,
+		const unhandledError = new Error('Unhandled error in GET handler');
+		logger.error('Unhandled error in GET handler', unhandledError, {
+			errorMessage: error instanceof Error ? error.message : 'Unknown error',
+			errorStack: error instanceof Error ? error.stack : undefined,
 			timestamp: new Date().toISOString(),
 		});
 		return NextResponse.json(
