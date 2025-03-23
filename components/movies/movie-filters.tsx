@@ -81,7 +81,7 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
 
   // Generate year options (from current year + 1 to 10 years back)
   const currentYear = new Date().getFullYear()
-  const years = Array.from({ length: 10 }, (_, i) => currentYear + 1 - i)
+  const years = Array.from({ length: 10 }, (_, i) => currentYear - i)
 
   return (
     <div className="mb-6">

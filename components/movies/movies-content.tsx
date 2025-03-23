@@ -62,6 +62,9 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
       
       // Define a date 30 days ago for "now in theaters" movies
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      
+      // Define a date 180 days ago for a wider range
+      const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
 
       // Apply category-specific filters
       switch (category) {
@@ -84,8 +87,7 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
           
         case 'now-in-theaters':
           query = query
-            .lt('release_date', now)  // Release date is in the past (already released)
-            .gt('release_date', thirtyDaysAgo)  // But not too old (within the last 30 days)
+            .lt('release_date', now)  // Only condition: release date is in the past (already released)
           break
       }
 
