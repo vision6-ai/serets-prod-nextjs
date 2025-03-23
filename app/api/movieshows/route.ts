@@ -94,6 +94,13 @@ async function fetchShowtimes() {
 
 // GET endpoint to fetch movieshows by moviepid
 export async function GET(request: NextRequest) {
+	logger.info('Starting GET request handler', {
+		url: request.url,
+		headers: Object.fromEntries(request.headers.entries()),
+		method: request.method,
+		timestamp: new Date().toISOString(),
+	});
+
 	try {
 		const { searchParams } = new URL(request.url);
 		const moviepid = searchParams.get('moviepid');
@@ -103,21 +110,24 @@ export async function GET(request: NextRequest) {
 			request.headers.get('authorization') ===
 			`Bearer ${process.env.CRON_SECRET}`;
 
-		logger.info('Received API request', {
+		logger.info('Request parameters parsed', {
 			moviepid,
 			fetchAll,
 			city,
 			isCronJob,
-			url: request.url,
+			allParams: Object.fromEntries(searchParams.entries()),
+			timestamp: new Date().toISOString(),
 		});
 
 		// If moviepid is provided and city is provided, fetch specific movie shows for that city
 		if (moviepid && city) {
-			logger.debug('Fetching movie shows for specific city', {
+			logger.info('Starting city-specific movie shows fetch', {
 				moviepid,
 				city,
+				timestamp: new Date().toISOString(),
 			});
 
+			const startTime = performance.now();
 			const { data: movieshows, error } = await supabaseAdmin
 				.from('movieshows')
 				.select('*')
@@ -126,18 +136,37 @@ export async function GET(request: NextRequest) {
 				.order('day', { ascending: true })
 				.order('time', { ascending: true });
 
+			const queryTime = performance.now() - startTime;
+			logger.info('Database query completed', {
+				executionTimeMs: queryTime,
+				resultCount: movieshows?.length || 0,
+				hasError: !!error,
+				timestamp: new Date().toISOString(),
+			});
+
 			if (error) {
-				logger.error('Database query error', error, { moviepid, city });
+				logger.error('Database query failed', {
+					error: error.message,
+					code: error.code,
+					details: error.details,
+					hint: error.hint,
+					moviepid,
+					city,
+					timestamp: new Date().toISOString(),
+				});
 				return NextResponse.json(
 					{ error: 'Failed to fetch movieshows', details: error.message },
 					{ status: 500 }
 				);
 			}
 
-			logger.info('Successfully fetched movie shows for city', {
+			logger.info('Successfully returning movie shows', {
 				moviepid,
 				city,
 				count: movieshows.length,
+				firstShowDate: movieshows[0]?.day,
+				lastShowDate: movieshows[movieshows.length - 1]?.day,
+				timestamp: new Date().toISOString(),
 			});
 
 			return NextResponse.json({
@@ -149,28 +178,48 @@ export async function GET(request: NextRequest) {
 
 		// If only moviepid is provided, fetch available cities for that movie
 		if (moviepid && !city && !fetchAll) {
-			logger.debug('Fetching available cities for movie', { moviepid });
+			logger.info('Starting cities fetch for movie', {
+				moviepid,
+				timestamp: new Date().toISOString(),
+			});
 
+			const startTime = performance.now();
 			const { data: cities, error } = await supabaseAdmin
 				.from('movieshows')
 				.select('city')
 				.eq('moviepid', moviepid)
 				.order('city');
 
+			const queryTime = performance.now() - startTime;
+			logger.info('Cities query completed', {
+				executionTimeMs: queryTime,
+				resultCount: cities?.length || 0,
+				hasError: !!error,
+				timestamp: new Date().toISOString(),
+			});
+
 			if (error) {
-				logger.error('Error fetching cities', error, { moviepid });
+				logger.error('Cities fetch failed', {
+					error: error.message,
+					code: error.code,
+					details: error.details,
+					hint: error.hint,
+					moviepid,
+					timestamp: new Date().toISOString(),
+				});
 				return NextResponse.json(
 					{ error: 'Failed to fetch cities', details: error.message },
 					{ status: 500 }
 				);
 			}
 
-			// Process distinct cities
 			const distinctCities = [...new Set(cities.map((c) => c.city))];
-
-			logger.info('Successfully fetched cities for movie', {
+			logger.info('Processed distinct cities', {
 				moviepid,
-				cityCount: distinctCities.length,
+				totalCities: cities.length,
+				distinctCitiesCount: distinctCities.length,
+				cities: distinctCities,
+				timestamp: new Date().toISOString(),
 			});
 
 			return NextResponse.json({
@@ -181,17 +230,32 @@ export async function GET(request: NextRequest) {
 
 		// If it's a cron job request or fetchAll=true, proceed with full sync
 		if (isCronJob || fetchAll === 'true') {
-			logger.info('Starting full sync with external API');
+			logger.info('Starting full sync operation', {
+				trigger: isCronJob ? 'CRON_JOB' : 'FETCH_ALL',
+				timestamp: new Date().toISOString(),
+			});
 
 			// Step 1: Fetch data from external API
+			const startTimeFetch = performance.now();
 			const showtimesData = await fetchShowtimes();
+			const fetchTime = performance.now() - startTimeFetch;
+
+			logger.info('External API fetch completed', {
+				executionTimeMs: fetchTime,
+				recordCount: showtimesData?.length || 0,
+				timestamp: new Date().toISOString(),
+			});
 
 			if (!showtimesData || !Array.isArray(showtimesData)) {
-				const errorMsg = 'Invalid response from external API';
-				logger.error('Invalid API response', new Error(errorMsg), {
-					response: showtimesData,
+				logger.error('Invalid API response structure', {
+					responseType: typeof showtimesData,
+					isArray: Array.isArray(showtimesData),
+					timestamp: new Date().toISOString(),
 				});
-				return NextResponse.json({ error: errorMsg }, { status: 500 });
+				return NextResponse.json(
+					{ error: 'Invalid response from external API' },
+					{ status: 500 }
+				);
 			}
 
 			// Step 2: Process and save data
@@ -202,18 +266,23 @@ export async function GET(request: NextRequest) {
 				errors: [] as string[],
 			};
 
-			logger.info('Processing fetched shows', {
-				total: showtimesData.length,
+			logger.info('Beginning batch processing', {
+				totalRecords: showtimesData.length,
+				timestamp: new Date().toISOString(),
 			});
+
+			const startTimeProcess = performance.now();
 
 			for (const showtime of showtimesData) {
 				try {
-					logger.debug('Processing showtime', {
+					logger.debug('Processing individual showtime', {
 						showtime_pid: showtime.SHOWTIME_PID,
-						movie: showtime.MOVIE_Name,
+						movie_name: showtime.MOVIE_Name,
+						day: showtime.DAY,
+						cinema: showtime.CINEMA,
+						timestamp: new Date().toISOString(),
 					});
 
-					// Check if showtime already exists
 					const { data: existingMovieshow, error: checkError } =
 						await supabaseAdmin
 							.from('movieshows')
@@ -222,8 +291,11 @@ export async function GET(request: NextRequest) {
 							.single();
 
 					if (checkError && checkError.code !== 'PGRST116') {
-						logger.error('Error checking existing showtime', checkError, {
+						logger.error('Existence check failed', {
+							error: checkError.message,
+							code: checkError.code,
 							showtime_pid: showtime.SHOWTIME_PID,
+							timestamp: new Date().toISOString(),
 						});
 						results.failed++;
 						results.errors.push(
@@ -232,16 +304,15 @@ export async function GET(request: NextRequest) {
 						continue;
 					}
 
-					// If showtime already exists, skip insertion
 					if (existingMovieshow) {
-						logger.debug('Showtime already exists', {
+						logger.debug('Skipping existing showtime', {
 							showtime_pid: showtime.SHOWTIME_PID,
+							timestamp: new Date().toISOString(),
 						});
 						results.existing++;
 						continue;
 					}
 
-					// Insert new showtime
 					const { error: insertError } = await supabaseAdmin
 						.from('movieshows')
 						.insert({
@@ -262,8 +333,12 @@ export async function GET(request: NextRequest) {
 						});
 
 					if (insertError) {
-						logger.error('Error inserting showtime', insertError, {
+						logger.error('Insert operation failed', {
+							error: insertError.message,
+							code: insertError.code,
+							details: insertError.details,
 							showtime_pid: showtime.SHOWTIME_PID,
+							timestamp: new Date().toISOString(),
 						});
 						results.failed++;
 						results.errors.push(
@@ -274,11 +349,16 @@ export async function GET(request: NextRequest) {
 
 					logger.debug('Successfully inserted showtime', {
 						showtime_pid: showtime.SHOWTIME_PID,
+						movie_name: showtime.MOVIE_Name,
+						timestamp: new Date().toISOString(),
 					});
 					results.success++;
 				} catch (error) {
-					logger.error('Error processing showtime', error as Error, {
-						showtime: showtime,
+					logger.error('Showtime processing error', {
+						error: error instanceof Error ? error.message : 'Unknown error',
+						showtime_pid: showtime.SHOWTIME_PID,
+						stack: error instanceof Error ? error.stack : undefined,
+						timestamp: new Date().toISOString(),
 					});
 					results.failed++;
 					results.errors.push(
@@ -289,9 +369,12 @@ export async function GET(request: NextRequest) {
 				}
 			}
 
-			logger.info('Completed processing shows', {
+			const processingTime = performance.now() - startTimeProcess;
+			logger.info('Batch processing completed', {
+				executionTimeMs: processingTime,
 				results,
-				total: showtimesData.length,
+				averageTimePerRecord: processingTime / showtimesData.length,
+				timestamp: new Date().toISOString(),
 			});
 
 			return NextResponse.json({
@@ -299,21 +382,26 @@ export async function GET(request: NextRequest) {
 				message: 'Processed showtimes from external API',
 				results,
 				total_processed: showtimesData.length,
+				execution_time_ms: processingTime,
 			});
 		}
 
 		// If no valid parameters provided and not a cron job
-		if (!isCronJob) {
-			logger.warning('Missing moviepid parameter', {
-				params: Object.fromEntries(searchParams),
-			});
-			return NextResponse.json(
-				{ error: 'Missing moviepid parameter' },
-				{ status: 400 }
-			);
-		}
+		logger.warning('Invalid request parameters', {
+			params: Object.fromEntries(searchParams),
+			isCronJob,
+			timestamp: new Date().toISOString(),
+		});
+		return NextResponse.json(
+			{ error: 'Missing moviepid parameter' },
+			{ status: 400 }
+		);
 	} catch (error) {
-		logger.error('Server error in GET handler', error as Error);
+		logger.error('Unhandled error in GET handler', {
+			error: error instanceof Error ? error.message : 'Unknown error',
+			stack: error instanceof Error ? error.stack : undefined,
+			timestamp: new Date().toISOString(),
+		});
 		return NextResponse.json(
 			{
 				error: 'Server error',
