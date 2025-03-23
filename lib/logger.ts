@@ -4,8 +4,8 @@ import path from 'path';
 const LOG_DIR = path.join(process.cwd(), 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'movieshows.log');
 
-// Ensure log directory exists
-if (!fs.existsSync(LOG_DIR)) {
+// Ensure log directory exists only in development
+if (process.env.NODE_ENV === 'development' && !fs.existsSync(LOG_DIR)) {
 	fs.mkdirSync(LOG_DIR, { recursive: true });
 }
 
@@ -31,11 +31,25 @@ export const logger = {
 
 		const logLine = JSON.stringify(entry) + '\n';
 
-		// Append to log file
-		fs.appendFileSync(LOG_FILE, logLine);
-
-		// Also console log in development
+		// Write to file only in development
 		if (process.env.NODE_ENV === 'development') {
+			fs.appendFileSync(LOG_FILE, logLine);
+		}
+
+		// Always console log in production and development
+		if (level === 'ERROR') {
+			console.error(
+				`[${entry.level}] ${entry.action}:`,
+				entry.data || '',
+				error || ''
+			);
+		} else if (level === 'WARNING') {
+			console.warn(
+				`[${entry.level}] ${entry.action}:`,
+				entry.data || '',
+				error || ''
+			);
+		} else {
 			console.log(
 				`[${entry.level}] ${entry.action}:`,
 				entry.data || '',
@@ -57,6 +71,7 @@ export const logger = {
 	},
 
 	debug: (action: string, data?: any) => {
+		// Debug logs only in development
 		if (process.env.NODE_ENV === 'development') {
 			logger.log('DEBUG', action, data);
 		}
