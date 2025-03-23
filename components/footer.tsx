@@ -76,12 +76,21 @@ export default function Footer() {
             <ul className="space-y-2">
               {resources.map((item) => (
                 <li key={item.href}>
-                  <Link 
-                    href={item.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {item.name}
-                  </Link>
+                  {item.name === 'Sitemap' ? (
+                    <a 
+                      href="/sitemap.xml"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {item.name}
+                    </a>
+                  ) : (
+                    <Link 
+                      href={item.href}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

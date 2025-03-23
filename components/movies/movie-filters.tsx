@@ -32,6 +32,7 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState<'release_date' | 'rating' | 'title'>('release_date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [availableYears, setAvailableYears] = useState<number[]>([])
 
   // Check if any filters are active
   const hasActiveFilters = selectedGenres.length > 0 || selectedYear !== null || selectedRating !== null
@@ -68,6 +69,30 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
     fetchGenres()
   }, [locale])
 
+  // Fetch available years from movies in the database
+  useEffect(() => {
+    const fetchYears = async () => {
+      const supabase = createClientComponentClient()
+      const { data, error } = await supabase
+        .from('movies')
+        .select('release_date')
+        .not('release_date', 'is', null)
+      
+      if (data && !error) {
+        // Extract years from release dates and create a unique set of years
+        const years = data
+          .map(movie => new Date(movie.release_date!).getFullYear())
+          .filter(year => !isNaN(year)); // Filter out any invalid dates
+        
+        // Create a unique sorted array of years (newest first)
+        const uniqueYears = [...new Set(years)].sort((a, b) => b - a);
+        setAvailableYears(uniqueYears);
+      }
+    }
+
+    fetchYears();
+  }, []);
+
   // Update filters when any selection changes
   useEffect(() => {
     onFilterChange({
@@ -78,10 +103,6 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
       sortOrder,
     })
   }, [selectedGenres, selectedYear, selectedRating, sortBy, sortOrder, onFilterChange])
-
-  // Generate year options (from current year + 1 to 10 years back)
-  const currentYear = new Date().getFullYear()
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - i)
 
   return (
     <div className="mb-6">
@@ -133,7 +154,7 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
               <ChevronDown className="h-4 w-4 ml-1 flex-shrink-0" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-48 p-0">
+          <PopoverContent className="w-48 p-0 max-h-[320px] overflow-y-auto">
             <div className="flex flex-col">
               <div className="px-4 py-3 font-medium">{t('filters.select_year')}</div>
               <Button
@@ -144,7 +165,7 @@ export function MovieFilters({ onFilterChange, locale }: MovieFiltersProps) {
                 {t('filters.all_years')}
                 {!selectedYear && <Check className="h-4 w-4 ml-2" />}
               </Button>
-              {years.map((year) => (
+              {availableYears.map((year) => (
                 <Button
                   key={year}
                   variant="ghost"

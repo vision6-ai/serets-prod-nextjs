@@ -22,6 +22,11 @@ export async function middleware(request: NextRequest) {
   // Get the pathname
   const { pathname } = request.nextUrl
 
+  // Check if it's an SEO file (sitemap.xml or robots.txt)
+  if (pathname === '/sitemap.xml' || pathname === '/robots.txt') {
+    return NextResponse.next()
+  }
+
   // Check if it's a direct route without locale
   const isNonLocalizedRoute = /^\/(actors|movies|genres)/.test(pathname)
   
@@ -46,5 +51,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/(he|en)/:path*', '/actors/:path*', '/movies/:path*', '/genres/:path*']
+  matcher: ['/', '/(he|en)/:path*', '/actors/:path*', '/movies/:path*', '/genres/:path*', '/sitemap.xml', '/robots.txt']
 }
