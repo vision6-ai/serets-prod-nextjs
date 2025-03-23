@@ -77,12 +77,27 @@ export function TicketBooking({
 
 	// Function to fetch available cities
 	const fetchCities = useCallback(async () => {
+		console.log('🎯 [API Call] Fetching cities for movie:', {
+			moviepid: countitPid,
+			timestamp: new Date().toISOString(),
+		});
+
 		try {
 			const response = await fetch(`/api/movieshows?moviepid=${countitPid}`);
 			if (!response.ok) {
+				console.error('❌ [API Error] Failed to fetch cities:', {
+					status: response.status,
+					statusText: response.statusText,
+				});
 				throw new Error('Failed to fetch cities');
 			}
 			const data = await response.json();
+			console.log('✅ [API Response] Cities data:', {
+				success: data.success,
+				citiesCount: data.data?.length || 0,
+				timestamp: new Date().toISOString(),
+			});
+
 			if (!data.success) {
 				throw new Error(data.error || 'Invalid response format');
 			}
@@ -96,14 +111,20 @@ export function TicketBooking({
 				)
 			).sort();
 
+			console.log('📍 [Processing] Unique cities:', {
+				cities,
+				count: cities.length,
+			});
+
 			setAvailableCities(cities);
 
 			// Auto-select city if only one available
 			if (cities.length === 1) {
+				console.log('🎯 [Auto-select] Single city available:', cities[0]);
 				setSelectedCity(cities[0]);
 			}
 		} catch (error) {
-			console.error('Error fetching cities:', error);
+			console.error('❌ [API Error] Error fetching cities:', error);
 			setError((error as Error).message);
 		}
 	}, [countitPid]);
@@ -131,6 +152,13 @@ export function TicketBooking({
 	const fetchMovieShows = useCallback(async () => {
 		if (!selectedCity) return;
 
+		console.log('🎯 [API Call] Fetching movie shows:', {
+			moviepid: countitPid,
+			city: selectedCity,
+			refreshing,
+			timestamp: new Date().toISOString(),
+		});
+
 		setLoading(true);
 		setError(null);
 		try {
@@ -140,12 +168,22 @@ export function TicketBooking({
 
 			// First, trigger a refresh of the data from the external API
 			if (!refreshing) {
+				console.log('🔄 [API Call] Triggering data refresh');
 				setRefreshing(true);
-				await fetch('/api/movieshows?fetchAll=true');
+				// const refreshResponse = await fetch('/api/movieshows?fetchAll=true');
+				console.log(
+					'✅ [API Response] Refresh status:'
+					// refreshResponse.status
+				);
 				setRefreshing(false);
 			}
 
 			// Then fetch the latest data for this movie and city
+			console.log('🎯 [API Call] Fetching filtered shows:', {
+				moviepid: countitPid,
+				city: selectedCity,
+			});
+
 			const response = await fetch(
 				`/api/movieshows?moviepid=${countitPid}&city=${encodeURIComponent(
 					selectedCity
@@ -154,10 +192,19 @@ export function TicketBooking({
 
 			if (!response.ok) {
 				const errorData = await response.json();
+				console.error('❌ [API Error] Failed to fetch shows:', {
+					status: response.status,
+					error: errorData,
+				});
 				throw new Error(errorData.details || 'Failed to fetch movie shows');
 			}
 
 			const data = await response.json();
+			console.log('✅ [API Response] Shows data:', {
+				success: data.success,
+				showsCount: data.data?.length || 0,
+				timestamp: new Date().toISOString(),
+			});
 
 			if (!data.success || !Array.isArray(data.data)) {
 				throw new Error(data.error || 'Invalid response format');
@@ -170,7 +217,14 @@ export function TicketBooking({
 				return showDate >= now;
 			});
 
+			console.log('📍 [Processing] Filtered shows:', {
+				total: data.data.length,
+				filtered: filteredShows.length,
+				removed: data.data.length - filteredShows.length,
+			});
+
 			if (filteredShows.length === 0) {
+				console.log('⚠️ [Warning] No upcoming shows available');
 				setError('No upcoming shows available');
 				setMovieShows([]);
 				setProcessedShows({});
@@ -186,10 +240,14 @@ export function TicketBooking({
 				const earliestDate = new Date(
 					Object.keys(processed)[0].replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')
 				);
+				console.log(
+					'🎯 [Auto-select] Earliest date:',
+					earliestDate.toISOString()
+				);
 				setSelectedDate(earliestDate);
 			}
 		} catch (error) {
-			console.error('Error in fetchMovieShows:', error);
+			console.error('❌ [API Error] Error in fetchMovieShows:', error);
 			setError((error as Error).message);
 			setMovieShows([]);
 			setProcessedShows({});
