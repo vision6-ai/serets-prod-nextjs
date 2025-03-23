@@ -87,12 +87,17 @@ const config: Config = {
           from: { transform: 'translateX(-100%)' },
           to: { transform: 'translateX(0)' },
         },
+        'attention': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.05)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'rtl-slide-in': 'rtl-slide-in 0.3s ease-out',
         'ltr-slide-in': 'ltr-slide-in 0.3s ease-out',
+        'attention': 'attention 0.8s ease-in-out 2',
       },
     },
   },

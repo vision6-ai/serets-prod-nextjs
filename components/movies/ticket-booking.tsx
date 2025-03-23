@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -81,6 +81,7 @@ export function TicketBooking({
 	const [processedEvents, setProcessedEvents] = useState<ProcessedEvents>({});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [buttonAnimated, setButtonAnimated] = useState(false);
 
 	// Type assertion for the translation function
 	const t = useTranslations('booking') as (key: string) => string;
@@ -201,6 +202,17 @@ export function TicketBooking({
 		}
 	}, [selectedTheater, biggerMovieId]);
 
+	// Animation timeout for mobile sticky button
+	useEffect(() => {
+		const animationTimer = setTimeout(() => {
+			setButtonAnimated(true);
+		}, 3000); // Animate after 3 seconds
+
+		return () => {
+			clearTimeout(animationTimer);
+		};
+	}, []);
+
 	// Generate available dates from processed events
 	const dates = Object.keys(processedEvents)
 		.map((dateStr) => {
@@ -233,7 +245,8 @@ export function TicketBooking({
 						className={cn(
 							'w-full md:w-auto text-lg gap-2 h-12',
 							'transition-all duration-200 hover:scale-105',
-							'shadow-lg hover:shadow-xl'
+							'shadow-lg hover:shadow-xl',
+							'hidden md:flex'
 						)}>
 						<Ticket className="w-5 h-5" />
 						{t('orderTickets')}
@@ -405,6 +418,23 @@ export function TicketBooking({
 					</div>
 				</DialogContent>
 			</Dialog>
+
+			{/* Mobile Sticky Button */}
+			<div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t z-50">
+				<Button
+					size="default"
+					className={cn(
+						'w-full gap-2 h-10',
+						'transition-all duration-300',
+						'shadow-lg',
+						'bg-gradient-to-r from-[#EE9FF7] to-[#FC660C] hover:brightness-105 text-white',
+						buttonAnimated && 'animate-attention'
+					)}
+					onClick={() => setOpen(true)}>
+					<Ticket className="w-4 h-4" />
+					{t('orderTickets')}
+				</Button>
+			</div>
 
 			{/* Booking Iframe Dialog */}
 			<Dialog open={showIframe} onOpenChange={setShowIframe}>

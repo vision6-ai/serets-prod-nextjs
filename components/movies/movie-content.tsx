@@ -60,7 +60,7 @@ export function MovieContent({
   const isRtl = locale === 'he'
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
       {/* Movie Header */}
       <div className="flex flex-col md:flex-row gap-8 mb-12">
         {/* Poster */}
