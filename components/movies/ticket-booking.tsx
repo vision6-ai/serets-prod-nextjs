@@ -102,14 +102,8 @@ export function TicketBooking({
 				throw new Error(data.error || 'Invalid response format');
 			}
 
-			// Get unique cities from shows
-			const cities = Array.from(
-				new Set(
-					(data.data as MovieShow[])
-						.filter((show) => show.city)
-						.map((show) => show.city)
-				)
-			).sort();
+			// The API already returns an array of distinct cities
+			const cities = (data.data as string[]).sort();
 
 			console.log('📍 [Processing] Unique cities:', {
 				cities,
