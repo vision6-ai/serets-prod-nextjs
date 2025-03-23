@@ -99,31 +99,32 @@ export async function GET(request: NextRequest) {
 		const moviepid = searchParams.get('moviepid');
 		const fetchAll = searchParams.get('fetchAll');
 		const city = searchParams.get('city');
+		const isCronJob =
+			request.headers.get('authorization') ===
+			`Bearer ${process.env.CRON_SECRET}`;
 
 		logger.info('Received API request', {
 			moviepid,
 			fetchAll,
 			city,
+			isCronJob,
 			url: request.url,
 		});
 
-		// If moviepid is provided, fetch specific movie shows
-		if (moviepid) {
-			logger.debug('Fetching movie shows from database', { moviepid, city });
+		// If moviepid is provided and city is provided, fetch specific movie shows for that city
+		if (moviepid && city) {
+			logger.debug('Fetching movie shows for specific city', {
+				moviepid,
+				city,
+			});
 
-			let query = supabaseAdmin
+			const { data: movieshows, error } = await supabaseAdmin
 				.from('movieshows')
 				.select('*')
 				.eq('moviepid', moviepid)
+				.eq('city', city)
 				.order('day', { ascending: true })
 				.order('time', { ascending: true });
-
-			// Add city filter if provided
-			if (city) {
-				query = query.eq('city', city);
-			}
-
-			const { data: movieshows, error } = await query;
 
 			if (error) {
 				logger.error('Database query error', error, { moviepid, city });
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
 				);
 			}
 
-			logger.info('Successfully fetched movie shows', {
+			logger.info('Successfully fetched movie shows for city', {
 				moviepid,
 				city,
 				count: movieshows.length,
@@ -146,8 +147,10 @@ export async function GET(request: NextRequest) {
 			});
 		}
 
-		// If we want to get available cities for a movie
-		if (moviepid && !fetchAll) {
+		// If only moviepid is provided, fetch available cities for that movie
+		if (moviepid && !city && !fetchAll) {
+			logger.debug('Fetching available cities for movie', { moviepid });
+
 			const { data: cities, error } = await supabaseAdmin
 				.from('movieshows')
 				.select('city')
@@ -155,17 +158,20 @@ export async function GET(request: NextRequest) {
 				.order('city');
 
 			if (error) {
-				console.error('Error fetching cities:', error);
+				logger.error('Error fetching cities', error, { moviepid });
 				return NextResponse.json(
 					{ error: 'Failed to fetch cities', details: error.message },
 					{ status: 500 }
 				);
 			}
 
-			// Process distinct cities manually
-			const distinctCities = [
-				...new Set(cities.map((c: { city: string }) => c.city)),
-			];
+			// Process distinct cities
+			const distinctCities = [...new Set(cities.map((c) => c.city))];
+
+			logger.info('Successfully fetched cities for movie', {
+				moviepid,
+				cityCount: distinctCities.length,
+			});
 
 			return NextResponse.json({
 				success: true,
@@ -173,8 +179,131 @@ export async function GET(request: NextRequest) {
 			});
 		}
 
-		// If fetchAll is not explicitly set to true, return an error
-		if (fetchAll !== 'true') {
+		// If it's a cron job request or fetchAll=true, proceed with full sync
+		if (isCronJob || fetchAll === 'true') {
+			logger.info('Starting full sync with external API');
+
+			// Step 1: Fetch data from external API
+			const showtimesData = await fetchShowtimes();
+
+			if (!showtimesData || !Array.isArray(showtimesData)) {
+				const errorMsg = 'Invalid response from external API';
+				logger.error('Invalid API response', new Error(errorMsg), {
+					response: showtimesData,
+				});
+				return NextResponse.json({ error: errorMsg }, { status: 500 });
+			}
+
+			// Step 2: Process and save data
+			const results = {
+				success: 0,
+				existing: 0,
+				failed: 0,
+				errors: [] as string[],
+			};
+
+			logger.info('Processing fetched shows', {
+				total: showtimesData.length,
+			});
+
+			for (const showtime of showtimesData) {
+				try {
+					logger.debug('Processing showtime', {
+						showtime_pid: showtime.SHOWTIME_PID,
+						movie: showtime.MOVIE_Name,
+					});
+
+					// Check if showtime already exists
+					const { data: existingMovieshow, error: checkError } =
+						await supabaseAdmin
+							.from('movieshows')
+							.select('id')
+							.eq('showtime_pid', showtime.SHOWTIME_PID)
+							.single();
+
+					if (checkError && checkError.code !== 'PGRST116') {
+						logger.error('Error checking existing showtime', checkError, {
+							showtime_pid: showtime.SHOWTIME_PID,
+						});
+						results.failed++;
+						results.errors.push(
+							`Error checking ${showtime.SHOWTIME_PID}: ${checkError.message}`
+						);
+						continue;
+					}
+
+					// If showtime already exists, skip insertion
+					if (existingMovieshow) {
+						logger.debug('Showtime already exists', {
+							showtime_pid: showtime.SHOWTIME_PID,
+						});
+						results.existing++;
+						continue;
+					}
+
+					// Insert new showtime
+					const { error: insertError } = await supabaseAdmin
+						.from('movieshows')
+						.insert({
+							moviepid: showtime.MoviePID,
+							showtime_pid: showtime.SHOWTIME_PID,
+							movie_name: showtime.MOVIE_Name,
+							movie_english: showtime.MOVIE_English,
+							banner: showtime.BANNER,
+							genres: showtime.GENRES,
+							day: new Date(showtime.DAY).toISOString(),
+							time: showtime.TIME,
+							cinema: showtime.CINEMA,
+							city: showtime.CITY,
+							chain: showtime.CHAIN,
+							available_seats: showtime.AvailableSEATS,
+							deep_link: showtime.DeepLink,
+							imdbid: showtime.IMDBID,
+						});
+
+					if (insertError) {
+						logger.error('Error inserting showtime', insertError, {
+							showtime_pid: showtime.SHOWTIME_PID,
+						});
+						results.failed++;
+						results.errors.push(
+							`Error inserting ${showtime.SHOWTIME_PID}: ${insertError.message}`
+						);
+						continue;
+					}
+
+					logger.debug('Successfully inserted showtime', {
+						showtime_pid: showtime.SHOWTIME_PID,
+					});
+					results.success++;
+				} catch (error) {
+					logger.error('Error processing showtime', error as Error, {
+						showtime: showtime,
+					});
+					results.failed++;
+					results.errors.push(
+						`Error processing showtime: ${
+							error instanceof Error ? error.message : 'Unknown error'
+						}`
+					);
+				}
+			}
+
+			logger.info('Completed processing shows', {
+				results,
+				total: showtimesData.length,
+			});
+
+			return NextResponse.json({
+				success: true,
+				message: 'Processed showtimes from external API',
+				results,
+				total_processed: showtimesData.length,
+			});
+		}
+
+		// If no valid parameters provided and not a cron job
+		if (!isCronJob) {
 			logger.warning('Missing moviepid parameter', {
 				params: Object.fromEntries(searchParams),
 			});
@@ -183,127 +312,6 @@ export async function GET(request: NextRequest) {
 				{ status: 400 }
 			);
 		}
-
-		// If we get here, proceed with the original fetch-and-update functionality
-		logger.info('Starting full sync with external API');
-
-		// Step 1: Fetch data from external API
-		const showtimesData = await fetchShowtimes();
-
-		if (!showtimesData || !Array.isArray(showtimesData)) {
-			const errorMsg = 'Invalid response from external API';
-			logger.error('Invalid API response', new Error(errorMsg), {
-				response: showtimesData,
-			});
-			return NextResponse.json({ error: errorMsg }, { status: 500 });
-		}
-
-		// Step 2: Process and save data
-		const results = {
-			success: 0,
-			existing: 0,
-			failed: 0,
-			errors: [] as string[],
-		};
-
-		logger.info('Processing fetched shows', {
-			total: showtimesData.length,
-		});
-
-		for (const showtime of showtimesData) {
-			try {
-				logger.debug('Processing showtime', {
-					showtime_pid: showtime.SHOWTIME_PID,
-					movie: showtime.MOVIE_Name,
-				});
-
-				// Check if showtime already exists
-				const { data: existingMovieshow, error: checkError } =
-					await supabaseAdmin
-						.from('movieshows')
-						.select('id')
-						.eq('showtime_pid', showtime.SHOWTIME_PID)
-						.single();
-
-				if (checkError && checkError.code !== 'PGRST116') {
-					logger.error('Error checking existing showtime', checkError, {
-						showtime_pid: showtime.SHOWTIME_PID,
-					});
-					results.failed++;
-					results.errors.push(
-						`Error checking ${showtime.SHOWTIME_PID}: ${checkError.message}`
-					);
-					continue;
-				}
-
-				// If showtime already exists, skip insertion
-				if (existingMovieshow) {
-					logger.debug('Showtime already exists', {
-						showtime_pid: showtime.SHOWTIME_PID,
-					});
-					results.existing++;
-					continue;
-				}
-
-				// Insert new showtime
-				const { error: insertError } = await supabaseAdmin
-					.from('movieshows')
-					.insert({
-						moviepid: showtime.MoviePID,
-						showtime_pid: showtime.SHOWTIME_PID,
-						movie_name: showtime.MOVIE_Name,
-						movie_english: showtime.MOVIE_English,
-						banner: showtime.BANNER,
-						genres: showtime.GENRES,
-						day: new Date(showtime.DAY).toISOString(),
-						time: showtime.TIME,
-						cinema: showtime.CINEMA,
-						city: showtime.CITY,
-						chain: showtime.CHAIN,
-						available_seats: showtime.AvailableSEATS,
-						deep_link: showtime.DeepLink,
-						imdbid: showtime.IMDBID,
-					});
-
-				if (insertError) {
-					logger.error('Error inserting showtime', insertError, {
-						showtime_pid: showtime.SHOWTIME_PID,
-					});
-					results.failed++;
-					results.errors.push(
-						`Error inserting ${showtime.SHOWTIME_PID}: ${insertError.message}`
-					);
-					continue;
-				}
-
-				logger.debug('Successfully inserted showtime', {
-					showtime_pid: showtime.SHOWTIME_PID,
-				});
-				results.success++;
-			} catch (error) {
-				logger.error('Error processing showtime', error as Error, {
-					showtime: showtime,
-				});
-				results.failed++;
-				results.errors.push(
-					`Error processing showtime: ${
-						error instanceof Error ? error.message : 'Unknown error'
-					}`
-				);
-			}
-		}
-
-		logger.info('Completed processing shows', {
-			results,
-			total: showtimesData.length,
-		});
-
-		return NextResponse.json({
-			success: true,
-			message: 'Processed showtimes from external API',
-			results,
-			total_processed: showtimesData.length,
-		});
 	} catch (error) {
 		logger.error('Server error in GET handler', error as Error);
 		return NextResponse.json(
