@@ -81,16 +81,24 @@ export async function GET(request: NextRequest) {
 		const { searchParams } = new URL(request.url);
 		const moviepid = searchParams.get('moviepid');
 		const fetchAll = searchParams.get('fetchAll');
+		const city = searchParams.get('city');
 
 		// If moviepid is provided, fetch specific movie shows
 		if (moviepid) {
 			console.log(`Fetching movieshows for moviepid: ${moviepid}`);
-			const { data: movieshows, error } = await supabaseAdmin
+			let query = supabaseAdmin
 				.from('movieshows')
 				.select('*')
 				.eq('moviepid', moviepid)
 				.order('day', { ascending: true })
 				.order('time', { ascending: true });
+
+			// Add city filter if provided
+			if (city) {
+				query = query.eq('city', city);
+			}
+
+			const { data: movieshows, error } = await query;
 
 			if (error) {
 				console.error('Error fetching movieshows:', error);
@@ -104,6 +112,29 @@ export async function GET(request: NextRequest) {
 				success: true,
 				data: movieshows,
 				count: movieshows.length,
+			});
+		}
+
+		// If we want to get available cities for a movie
+		if (moviepid && !fetchAll) {
+			const { data: cities, error } = await supabaseAdmin
+				.from('movieshows')
+				.select('city')
+				.eq('moviepid', moviepid)
+				.order('city')
+				.distinct();
+
+			if (error) {
+				console.error('Error fetching cities:', error);
+				return NextResponse.json(
+					{ error: 'Failed to fetch cities', details: error.message },
+					{ status: 500 }
+				);
+			}
+
+			return NextResponse.json({
+				success: true,
+				data: cities.map((c) => c.city),
 			});
 		}
 
