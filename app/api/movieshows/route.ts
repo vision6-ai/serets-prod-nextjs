@@ -121,8 +121,7 @@ export async function GET(request: NextRequest) {
 				.from('movieshows')
 				.select('city')
 				.eq('moviepid', moviepid)
-				.order('city')
-				.distinct();
+				.order('city');
 
 			if (error) {
 				console.error('Error fetching cities:', error);
@@ -132,9 +131,12 @@ export async function GET(request: NextRequest) {
 				);
 			}
 
+			// Process distinct cities manually
+			const distinctCities = [...new Set(cities.map((c: { city: string }) => c.city))];
+
 			return NextResponse.json({
 				success: true,
-				data: cities.map((c) => c.city),
+				data: distinctCities,
 			});
 		}
 
