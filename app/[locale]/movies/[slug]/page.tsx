@@ -53,7 +53,7 @@ async function getMovieData(slug: string, locale: Locale) {
 	// Fetch the movie data
 	const { data: movie, error: movieError } = await supabase
 		.from('movies')
-		.select('id, slug, release_date, duration, rating, bigger_movie_id')
+		.select('id, slug, release_date, duration, rating, countit_pid')
 		.eq('slug', slug)
 		.single();
 
@@ -62,9 +62,9 @@ async function getMovieData(slug: string, locale: Locale) {
 		return null;
 	}
 
-	// Store the bigger_movie_id
-	const biggerMovieId = movie.bigger_movie_id;
-	console.log('Fetched bigger_movie_id:', biggerMovieId);
+	// Store the countit_pid
+	const countitPid = movie.countit_pid;
+	console.log('Fetched countit_pid:', countitPid);
 
 	// Continue with fetching translations and other data
 	const { data: translations, error: translationError } = await supabase
@@ -97,7 +97,7 @@ async function getMovieData(slug: string, locale: Locale) {
 		poster_url: translation?.poster_url || null,
 		backdrop_url: null, // Required by MovieContent but not in our data
 		trailer_url: translation?.trailer_url || null,
-		bigger_movie_id: movie.bigger_movie_id,
+		countit_pid: movie.countit_pid,
 	} as Movie & {
 		poster_url: string | null;
 		backdrop_url: string | null;
@@ -311,7 +311,7 @@ export default async function MoviePage({
 			awards={data.awards}
 			similarMovies={data.similarMovies}
 			locale={params.locale}
-			biggerMovieId={data.movie.bigger_movie_id ?? ''}
+			countitPid={data.movie.countit_pid ?? ''}
 		/>
 	);
 }

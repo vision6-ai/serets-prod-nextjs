@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
-	Dialog,
+	Dialog as DialogRoot,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
@@ -18,37 +18,31 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { ChevronLeft, Ticket } from 'lucide-react';
+import { ChevronLeft, Ticket, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { createClient } from '@supabase/supabase-js';
-import { tokenService } from '@/lib/services/token-service';
 
-// Initialize Supabase client
-const supabase = createClient(
-	process.env.NEXT_PUBLIC_SUPABASE_URL!,
-	process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-interface Theater {
-	id: string;
-	name: string;
-	location: string;
-	bigger_id: string;
-	access_code_bigger_picture: string;
-}
-
-interface ShowTime {
-	id: string;
+interface MovieShow {
+	id: number;
+	moviepid: number;
+	showtime_pid: number;
+	movie_name: string;
+	movie_english: string;
+	banner: string;
+	genres: string;
+	day: string;
 	time: string;
-	eventCode: string;
-	venueName: string;
-	bookingUrl: string;
+	cinema: string;
+	city: string;
+	chain: string;
+	available_seats: number;
+	deep_link: string;
+	imdbid: string;
 }
 
-interface ProcessedEvents {
-	[date: string]: ShowTime[];
+interface ProcessedShows {
+	[date: string]: MovieShow[];
 }
 
 interface TicketBookingProps {
@@ -56,7 +50,7 @@ interface TicketBookingProps {
 	movieTitle: string;
 	posterUrl: string | null;
 	isRtl?: boolean;
-	biggerMovieId: string;
+	countitPid: string;
 }
 
 export function TicketBooking({
@@ -64,60 +58,69 @@ export function TicketBooking({
 	movieTitle,
 	posterUrl,
 	isRtl = false,
-	biggerMovieId,
+	countitPid,
 }: TicketBookingProps) {
 	const locale = useLocale();
 	const [open, setOpen] = useState(false);
 	const [showIframe, setShowIframe] = useState(false);
-	const [step, setStep] = useState<'theater' | 'date' | 'time' | 'seats'>(
-		'theater'
-	);
-	const [selectedTheater, setSelectedTheater] = useState<Theater | null>(null);
 	const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-	const [selectedTime, setSelectedTime] = useState<ShowTime | null>(null);
-	const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
-	const [theaters, setTheaters] = useState<Theater[]>([]);
-	const [events, setEvents] = useState<any>(null);
-	const [processedEvents, setProcessedEvents] = useState<ProcessedEvents>({});
+	const [selectedShow, setSelectedShow] = useState<MovieShow | null>(null);
+	const [selectedCity, setSelectedCity] = useState<string | null>(null);
+	const [availableCities, setAvailableCities] = useState<string[]>([]);
+	const [movieShows, setMovieShows] = useState<MovieShow[]>([]);
+	const [processedShows, setProcessedShows] = useState<ProcessedShows>({});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [buttonAnimated, setButtonAnimated] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
 
-	// Type assertion for the translation function
 	const t = useTranslations('booking') as (key: string) => string;
 
-	// Function to process events data
-	const processEvents = (eventsData: any) => {
-		const processed: ProcessedEvents = {};
-
-		// Check if eventsData is an array
-		if (!Array.isArray(eventsData)) {
-			console.error('Events data is not an array:', eventsData);
-			return processed;
-		}
-
-		eventsData.forEach((event) => {
-			if (!event || !event.bdf || !event.dtf) {
-				console.warn('Invalid event data:', event);
-				return;
+	// Function to fetch available cities
+	const fetchCities = useCallback(async () => {
+		try {
+			const response = await fetch(`/api/movieshows?moviepid=${countitPid}`);
+			if (!response.ok) {
+				throw new Error('Failed to fetch cities');
+			}
+			const data = await response.json();
+			if (!data.success) {
+				throw new Error(data.error || 'Invalid response format');
 			}
 
-			const date = event.bdf; // Using bdf as date key (YYYYMMDD format)
-			const time = {
-				id: event.id?.toString() || '',
-				time: event.dtf.split(' ')[1] || '', // Extract time from dtf
-				eventCode: event.eventCode || '',
-				venueName: event.venueName || '',
-				bookingUrl: event.bookingNativeUrl || '',
-			};
+			// Get unique cities from shows
+			const cities = Array.from(
+				new Set(
+					(data.data as MovieShow[])
+						.filter((show) => show.city)
+						.map((show) => show.city)
+				)
+			).sort();
 
+			setAvailableCities(cities);
+
+			// Auto-select city if only one available
+			if (cities.length === 1) {
+				setSelectedCity(cities[0]);
+			}
+		} catch (error) {
+			console.error('Error fetching cities:', error);
+			setError((error as Error).message);
+		}
+	}, [countitPid]);
+
+	// Function to process shows data by date
+	const processShows = (shows: MovieShow[]) => {
+		const processed: ProcessedShows = {};
+
+		shows.forEach((show) => {
+			const date = format(new Date(show.day), 'yyyyMMdd');
 			if (!processed[date]) {
 				processed[date] = [];
 			}
-			processed[date].push(time);
+			processed[date].push(show);
 		});
 
-		// Sort times for each date
+		// Sort shows by time for each date
 		Object.keys(processed).forEach((date) => {
 			processed[date].sort((a, b) => a.time.localeCompare(b.time));
 		});
@@ -125,299 +128,346 @@ export function TicketBooking({
 		return processed;
 	};
 
-	useEffect(() => {
-		// Fetch theaters data from Supabase
-		const fetchTheaters = async () => {
-			const { data, error } = await supabase
-				.from('theaters')
-				.select('id, name, location, bigger_id, access_code_bigger_picture');
+	const fetchMovieShows = useCallback(async () => {
+		if (!selectedCity) return;
 
-			if (error) {
-				console.error('Error fetching theaters:', error);
-				setError('Failed to fetch theaters');
-			} else {
-				setTheaters(data || []);
+		setLoading(true);
+		setError(null);
+		try {
+			if (!countitPid) {
+				throw new Error('No movie ID provided');
 			}
-		};
 
-		fetchTheaters();
-	}, []);
+			// First, trigger a refresh of the data from the external API
+			if (!refreshing) {
+				setRefreshing(true);
+				await fetch('/api/movieshows?fetchAll=true');
+				setRefreshing(false);
+			}
 
-	useEffect(() => {
-		if (selectedTheater?.bigger_id && biggerMovieId) {
-			const fetchEvents = async () => {
-				setLoading(true);
-				setError(null);
-				try {
-					// Get valid token for the theater
-					console.log(
-						'Fetching token for theater:',
-						selectedTheater.access_code_bigger_picture
-					);
-					const token = await tokenService.getValidToken(
-						selectedTheater.access_code_bigger_picture
-					);
-					console.log('Received token:', token ? 'Valid token' : 'No token');
+			// Then fetch the latest data for this movie and city
+			const response = await fetch(
+				`/api/movieshows?moviepid=${countitPid}&city=${encodeURIComponent(
+					selectedCity
+				)}`
+			);
 
-					if (!token) {
-						throw new Error('Failed to get valid token');
-					}
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.details || 'Failed to fetch movie shows');
+			}
 
-					const response = await fetch(
-						`https://pub-api.biggerpicture.ai/mapiAPI/group/events?full=true&siteId=${selectedTheater.bigger_id}&edi=${biggerMovieId}`,
-						{
-							headers: {
-								Authorization: `Bearer ${token}`,
-								'Content-Type': 'application/json',
-							},
-						}
-					);
+			const data = await response.json();
 
-					if (!response.ok) {
-						const errorText = await response.text();
-						throw new Error(`API error: ${response.status} ${errorText}`);
-					}
+			if (!data.success || !Array.isArray(data.data)) {
+				throw new Error(data.error || 'Invalid response format');
+			}
 
-					const data = await response.json();
-					console.log('Events API Response:', data);
+			// Filter out shows with past dates
+			const now = new Date();
+			const filteredShows = data.data.filter((show: MovieShow) => {
+				const showDate = new Date(show.day);
+				return showDate >= now;
+			});
 
-					if (!data) {
-						throw new Error('No data received from API');
-					}
+			if (filteredShows.length === 0) {
+				setError('No upcoming shows available');
+				setMovieShows([]);
+				setProcessedShows({});
+				return;
+			}
 
-					setEvents(data.events);
-					const processed = processEvents(data.events);
-					setProcessedEvents(processed);
-					console.log('Processed Events:', processed);
-				} catch (error) {
-					console.error('Error fetching events:', error);
-					setError('Failed to fetch events: ' + (error as Error).message);
-					setProcessedEvents({});
-				} finally {
-					setLoading(false);
-				}
-			};
+			setMovieShows(filteredShows);
+			const processed = processShows(filteredShows);
+			setProcessedShows(processed);
 
-			fetchEvents();
+			// Auto-select the earliest date if none is selected
+			if (!selectedDate && Object.keys(processed).length > 0) {
+				const earliestDate = new Date(
+					Object.keys(processed)[0].replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')
+				);
+				setSelectedDate(earliestDate);
+			}
+		} catch (error) {
+			console.error('Error in fetchMovieShows:', error);
+			setError((error as Error).message);
+			setMovieShows([]);
+			setProcessedShows({});
+		} finally {
+			setLoading(false);
 		}
-	}, [selectedTheater, biggerMovieId]);
+	}, [countitPid, selectedCity, refreshing, selectedDate]);
 
-	// Animation timeout for mobile sticky button
 	useEffect(() => {
-		const animationTimer = setTimeout(() => {
-			setButtonAnimated(true);
-		}, 3000); // Animate after 3 seconds
+		if (open && countitPid) {
+			fetchCities();
+		} else {
+			// Reset states when dialog is closed
+			setSelectedCity(null);
+			setSelectedDate(null);
+			setSelectedShow(null);
+			setMovieShows([]);
+			setProcessedShows({});
+			setError(null);
+		}
+	}, [open, countitPid, fetchCities]);
 
-		return () => {
-			clearTimeout(animationTimer);
-		};
-	}, []);
-
-	// Generate available dates from processed events
-	const dates = Object.keys(processedEvents)
-		.map((dateStr) => {
-			const year = dateStr.substring(0, 4);
-			const month = dateStr.substring(4, 6);
-			const day = dateStr.substring(6, 8);
-			const date = new Date(`${year}-${month}-${day}`);
-			return {
-				value: dateStr,
-				label: format(date, 'EEEE, MMMM d'),
-			};
-		})
-		.sort((a, b) => a.value.localeCompare(b.value));
+	// Fetch shows when city is selected
+	useEffect(() => {
+		if (selectedCity) {
+			fetchMovieShows();
+		}
+	}, [selectedCity, fetchMovieShows]);
 
 	const handleBooking = () => {
-		if (selectedTime && selectedTheater) {
+		if (selectedShow) {
 			setShowIframe(true);
 		}
 	};
 
-	// Use biggerMovieId as needed
-	console.log('Bigger Movie ID:', biggerMovieId);
+	const handleCityChange = (value: string) => {
+		setSelectedCity(value);
+		setSelectedDate(null);
+		setSelectedShow(null);
+	};
+
+	const handleDateChange = (value: string) => {
+		const year = value.substring(0, 4);
+		const month = value.substring(4, 6);
+		const day = value.substring(6, 8);
+		const newDate = new Date(`${year}-${month}-${day}`);
+		setSelectedDate(newDate);
+		setSelectedShow(null);
+	};
+
+	const handleShowSelection = (value: string) => {
+		const dateKey = selectedDate ? format(selectedDate, 'yyyyMMdd') : '';
+		const availableShows = processedShows[dateKey] || [];
+		const show = availableShows.find(
+			(s) => s.showtime_pid.toString() === value
+		);
+		setSelectedShow(show || null);
+	};
 
 	return (
 		<>
-			<Dialog open={open} onOpenChange={setOpen}>
+			<DialogRoot open={open} onOpenChange={setOpen}>
 				<DialogTrigger asChild>
 					<Button
 						size="lg"
 						className={cn(
 							'w-full md:w-auto text-lg gap-2 h-12',
 							'transition-all duration-200 hover:scale-105',
-							'shadow-lg hover:shadow-xl',
-							'hidden md:flex'
+							'shadow-lg hover:shadow-xl'
 						)}>
 						<Ticket className="w-5 h-5" />
 						{t('orderTickets')}
 					</Button>
 				</DialogTrigger>
 
-				<DialogContent className="sm:max-w-[600px]">
-					<DialogHeader className="space-y-4">
-						<div className="flex items-center gap-2">
-							<DialogClose asChild>
-								<Button variant="ghost" size="icon" className="shrink-0">
-									<ChevronLeft className="h-4 w-4" />
-									<span className="sr-only">Back</span>
-								</Button>
-							</DialogClose>
-							<DialogTitle className="text-xl">{movieTitle}</DialogTitle>
-						</div>
-					</DialogHeader>
-
-					<div className="grid md:grid-cols-[150px,1fr] gap-6 pt-4">
-						{/* Movie Poster */}
-						<div className="hidden md:block">
-							<div className="aspect-[2/3] relative rounded-lg overflow-hidden bg-muted">
-								{posterUrl ? (
-									<Image
-										src={posterUrl}
-										alt={movieTitle}
-										fill
-										className="object-cover"
-									/>
-								) : (
-									<div className="absolute inset-0 flex items-center justify-center p-4 text-center text-muted-foreground">
-										<span>{movieTitle}</span>
-									</div>
-								)}
-							</div>
-						</div>
-
-						{/* Booking Form */}
-						<div className="space-y-6">
-							{/* Theater Selection */}
-							<div className="space-y-2">
-								<label className="block text-sm font-medium mb-1">
-									{t('selectTheater')}
-								</label>
-								<Select
-									value={selectedTheater?.id}
-									onValueChange={(value) =>
-										setSelectedTheater(
-											theaters.find((t) => t.id === value) || null
-										)
-									}>
-									<SelectTrigger>
-										<SelectValue placeholder={t('chooseTheater')} />
-									</SelectTrigger>
-									<SelectContent>
-										{theaters.map((theater) => (
-											<SelectItem key={theater.id} value={theater.id}>
-												<div>
-													<div className="font-medium">{theater.name}</div>
-													<div className="text-sm text-muted-foreground">
-														{theater.location}
-													</div>
-												</div>
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-
-							{/* Loading and Error States */}
-							{loading && (
-								<div className="text-center text-muted-foreground">
-									Loading events...
+				<DialogContent
+					className={cn(
+						'sm:max-w-[600px]',
+						showIframe && 'sm:max-w-[900px] h-[80vh]'
+					)}>
+					{!showIframe ? (
+						<>
+							<DialogHeader className="space-y-4">
+								<div className="flex items-center gap-2">
+									<DialogClose asChild>
+										<Button variant="ghost" size="icon" className="shrink-0">
+											<ChevronLeft className="h-4 w-4" />
+											<span className="sr-only">Back</span>
+										</Button>
+									</DialogClose>
+									<DialogTitle className="text-xl flex-1">
+										{movieTitle}
+									</DialogTitle>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="shrink-0"
+										onClick={() => fetchMovieShows()}
+										disabled={loading || refreshing}>
+										<RefreshCw
+											className={cn('h-4 w-4', loading && 'animate-spin')}
+										/>
+										<span className="sr-only">Refresh</span>
+									</Button>
 								</div>
+							</DialogHeader>
+
+							<div className="grid md:grid-cols-[150px,1fr] gap-6 pt-4">
+								{/* Movie Poster */}
+								<div className="hidden md:block">
+									<div className="aspect-[2/3] relative rounded-lg overflow-hidden bg-muted">
+										{posterUrl ? (
+											<Image
+												src={posterUrl}
+												alt={movieTitle}
+												fill
+												className="object-cover"
+											/>
+										) : (
+											<div className="absolute inset-0 flex items-center justify-center p-4 text-center text-muted-foreground">
+												<span>{movieTitle}</span>
+											</div>
+										)}
+									</div>
+								</div>
+
+								{/* Booking Form */}
+								<div className="space-y-6">
+									{/* Loading and Error States */}
+									{loading && (
+										<div className="text-center text-muted-foreground">
+											Loading showtimes...
+										</div>
+									)}
+									{error && (
+										<div className="text-center text-red-500">{error}</div>
+									)}
+
+									{/* City Selection */}
+									<div className="space-y-2">
+										<label className="block text-sm font-medium mb-1">
+											{t('selectCity')}
+										</label>
+										<Select
+											value={selectedCity || undefined}
+											onValueChange={handleCityChange}
+											disabled={availableCities.length === 0 || loading}>
+											<SelectTrigger>
+												<SelectValue placeholder={t('chooseCity')} />
+											</SelectTrigger>
+											<SelectContent>
+												{availableCities.map((city) => (
+													<SelectItem key={city} value={city}>
+														{city}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+
+									{selectedCity && (
+										<>
+											{/* Date Selection */}
+											<div className="space-y-2">
+												<label className="block text-sm font-medium mb-1">
+													{t('selectDate')}
+												</label>
+												<Select
+													value={
+														selectedDate
+															? format(selectedDate, 'yyyyMMdd')
+															: undefined
+													}
+													onValueChange={handleDateChange}
+													disabled={
+														Object.keys(processedShows).length === 0 || loading
+													}>
+													<SelectTrigger>
+														<SelectValue placeholder={t('chooseDate')} />
+													</SelectTrigger>
+													<SelectContent>
+														{Object.keys(processedShows)
+															.sort()
+															.map((dateStr) => {
+																const year = dateStr.substring(0, 4);
+																const month = dateStr.substring(4, 6);
+																const day = dateStr.substring(6, 8);
+																const date = new Date(
+																	`${year}-${month}-${day}`
+																);
+																return (
+																	<SelectItem key={dateStr} value={dateStr}>
+																		{format(date, 'EEEE, MMMM d')}
+																	</SelectItem>
+																);
+															})}
+													</SelectContent>
+												</Select>
+											</div>
+
+											{/* Show Selection */}
+											<div className="space-y-2">
+												<label className="block text-sm font-medium mb-1">
+													{t('selectTime')}
+												</label>
+												<Select
+													value={selectedShow?.showtime_pid.toString()}
+													onValueChange={handleShowSelection}
+													disabled={!selectedDate || loading}>
+													<SelectTrigger className="w-full h-[80px]">
+														<SelectValue
+															placeholder={t('chooseTime')}
+															className="text-base"
+														/>
+													</SelectTrigger>
+													<SelectContent className="w-[400px] max-h-[400px]">
+														{selectedDate &&
+															processedShows[
+																format(selectedDate, 'yyyyMMdd')
+															]?.map((show) => (
+																<SelectItem
+																	key={show.showtime_pid}
+																	value={show.showtime_pid.toString()}
+																	className="py-3 h-[90px]">
+																	<div className="flex flex-col gap-2 w-full">
+																		<div className="text-sm font-medium text-left line-clamp-2">
+																			<span className="text-base font-medium pr-2">
+																				{show.time.substring(0, 5)}
+																			</span>
+																			{show.movie_name}
+																		</div>
+																		<div className="flex justify-between items-center gap-4">
+																			<span className="text-xs text-muted-foreground">
+																				{show.city} - {show.cinema}
+																			</span>
+																		</div>
+																	</div>
+																</SelectItem>
+															))}
+													</SelectContent>
+												</Select>
+											</div>
+
+											<Button
+												className="w-full h-12 text-lg mt-8"
+												disabled={!selectedShow || loading}
+												onClick={handleBooking}>
+												{loading ? 'Loading...' : t('bookNow')}
+											</Button>
+										</>
+									)}
+								</div>
+							</div>
+						</>
+					) : (
+						<div className="relative h-full">
+							<div className="absolute top-2 left-2 z-10">
+								<Button
+									variant="ghost"
+									size="icon"
+									onClick={() => setShowIframe(false)}
+									className="bg-white/90 hover:bg-white shadow-md">
+									<ChevronLeft className="h-4 w-4" />
+									<span className="sr-only">Back to showtimes</span>
+								</Button>
+							</div>
+							{selectedShow && (
+								<iframe
+									src={selectedShow.deep_link}
+									className="w-full h-full rounded-lg"
+									allow="payment"
+									title="Ticket Booking"
+								/>
 							)}
-							{error && <div className="text-center text-red-500">{error}</div>}
-
-							{/* Date Selection */}
-							<div className="space-y-2">
-								<label className="block text-sm font-medium mb-1">
-									{t('selectDate')}
-								</label>
-								<Select
-									value={
-										selectedDate ? format(selectedDate, 'yyyyMMdd') : undefined
-									}
-									onValueChange={(value) => {
-										const year = value.substring(0, 4);
-										const month = value.substring(4, 6);
-										const day = value.substring(6, 8);
-										setSelectedDate(new Date(`${year}-${month}-${day}`));
-										setSelectedTime(null); // Reset time when date changes
-									}}
-									disabled={
-										!selectedTheater ||
-										Object.keys(processedEvents).length === 0 ||
-										loading
-									}>
-									<SelectTrigger>
-										<SelectValue placeholder={t('chooseDate')} />
-									</SelectTrigger>
-									<SelectContent>
-										{Object.keys(processedEvents)
-											.sort()
-											.map((dateStr) => {
-												const year = dateStr.substring(0, 4);
-												const month = dateStr.substring(4, 6);
-												const day = dateStr.substring(6, 8);
-												const date = new Date(`${year}-${month}-${day}`);
-												return (
-													<SelectItem key={dateStr} value={dateStr}>
-														{format(date, 'EEEE, MMMM d')}
-													</SelectItem>
-												);
-											})}
-									</SelectContent>
-								</Select>
-							</div>
-
-							{/* Time Selection */}
-							<div className="space-y-2">
-								<label className="block text-sm font-medium mb-1">
-									{t('selectTime')}
-								</label>
-								<Select
-									value={selectedTime?.id}
-									onValueChange={(value: string) => {
-										const dateKey = selectedDate
-											? format(selectedDate, 'yyyyMMdd')
-											: '';
-										const availableTimes = processedEvents[dateKey] || [];
-										setSelectedTime(
-											availableTimes.find((t) => t.id === value) || null
-										);
-									}}
-									disabled={!selectedTheater || !selectedDate || loading}>
-									<SelectTrigger>
-										<SelectValue placeholder={t('chooseTime')} />
-									</SelectTrigger>
-									<SelectContent>
-										{selectedDate &&
-											processedEvents[format(selectedDate, 'yyyyMMdd')]?.map(
-												(time) => (
-													<SelectItem key={time.id} value={time.id}>
-														<div className="flex justify-between items-center gap-4">
-															<span>{time.time}</span>
-															<div className="text-xs text-muted-foreground">
-																{time.venueName}
-															</div>
-														</div>
-													</SelectItem>
-												)
-											)}
-									</SelectContent>
-								</Select>
-							</div>
-
-							{/* Book Button */}
-							<Button
-								className="w-full h-12 text-lg mt-8"
-								disabled={
-									!selectedTheater || !selectedDate || !selectedTime || loading
-								}
-								onClick={handleBooking}>
-								{loading ? 'Loading...' : t('bookNow')}
-							</Button>
 						</div>
-					</div>
+					)}
 				</DialogContent>
-			</Dialog>
+			</DialogRoot>
 
 			{/* Mobile Sticky Button */}
 			<div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t z-50">
@@ -427,44 +477,13 @@ export function TicketBooking({
 						'w-full gap-2 h-10',
 						'transition-all duration-300',
 						'shadow-lg',
-						'bg-gradient-to-r from-[#EE9FF7] to-[#FC660C] hover:brightness-105 text-white',
-						buttonAnimated && 'animate-attention'
+						'bg-gradient-to-r from-[#EE9FF7] to-[#FC660C] hover:brightness-105 text-white'
 					)}
 					onClick={() => setOpen(true)}>
 					<Ticket className="w-4 h-4" />
 					{t('orderTickets')}
 				</Button>
 			</div>
-
-			{/* Booking Iframe Dialog */}
-			<Dialog open={showIframe} onOpenChange={setShowIframe}>
-				<DialogContent className="sm:max-w-[900px] sm:h-[800px] p-0">
-					<DialogHeader className="p-4 pb-0">
-						<div className="flex items-center justify-between">
-							<DialogTitle className="text-xl">{movieTitle}</DialogTitle>
-							<DialogClose asChild>
-								<Button variant="ghost" size="icon" className="shrink-0">
-									<ChevronLeft className="h-4 w-4" />
-									<span className="sr-only">Close</span>
-								</Button>
-							</DialogClose>
-						</div>
-					</DialogHeader>
-					<div className="h-full">
-						{selectedTheater && selectedTime && (
-							<iframe
-								src={`https://ecom.biggerpicture.ai/site/${
-									selectedTheater.bigger_id
-								}/tickets?languageId=${
-									locale === 'he' ? 'he-IL' : 'en-US'
-								}&saleChannelCode=WEB&code=${selectedTime.eventCode}`}
-								className="w-full h-[700px] border-0"
-								allow="payment"
-							/>
-						)}
-					</div>
-				</DialogContent>
-			</Dialog>
 		</>
 	);
 }
