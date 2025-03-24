@@ -205,5 +205,29 @@
 			"facebook": "Facebook",
 			"instagram": "Instagram"
 		}
+	},
+	"cities": {
+		"Ashdod": "Ashdod",
+		"Ashkelon": "Ashkelon",
+		"Ayalon": "Ayalon",
+		"Beer Sheva": "Beer Sheva",
+		"Givatayim": "Givatayim",
+		"Glilot": "Glilot",
+		"Hadera": "Hadera",
+		"Haifa": "Haifa",
+		"Jerusalem": "Jerusalem",
+		"Karmiel": "Karmiel", 
+		"Kfar Saba": "Kfar Saba",
+		"Kiryat Ono": "Kiryat Ono",
+		"Kiryon": "Kiryon",
+		"Modiin": "Modiin",
+		"Nahariya": "Nahariya",
+		"Natanya": "Natanya",
+		"Petah Tiqwa": "Petah Tiqwa",
+		"Raanana": "Raanana",
+		"Rehovot": "Rehovot",
+		"Rishon Lezion": "Rishon Lezion",
+		"Tel Aviv": "Tel Aviv",
+		"Zichron Yaakov": "Zichron Yaakov"
 	}
 }

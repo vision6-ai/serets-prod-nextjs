@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 import {
 	Select,
 	SelectContent,
@@ -23,6 +24,18 @@ export function BookingForm({
 	onBooking,
 	t,
 }: BookingFormProps) {
+	const citiesT = useTranslations('cities');
+
+	// Function to get the translated city name
+	const getTranslatedCity = (city: string) => {
+		try {
+			return citiesT(city);
+		} catch (error) {
+			// If translation not found, return the original name
+			return city;
+		}
+	};
+
 	return (
 		<div className="space-y-6">
 			{/* Loading and Error States */}
@@ -48,7 +61,7 @@ export function BookingForm({
 					<SelectContent>
 						{availableCities.map((city) => (
 							<SelectItem key={city} value={city}>
-								{city}
+								{getTranslatedCity(city)}
 							</SelectItem>
 						))}
 					</SelectContent>
@@ -121,7 +134,7 @@ export function BookingForm({
 													</div>
 													<div className="flex justify-between items-center gap-4">
 														<span className="text-xs text-muted-foreground">
-															{show.city} - {show.cinema}
+															{getTranslatedCity(show.city)} - {show.cinema}
 														</span>
 													</div>
 												</div>

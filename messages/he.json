@@ -205,5 +205,31 @@
 			"facebook": "פייסבוק",
 			"instagram": "אינסטגרם"
 		}
+	},
+	"cities": {
+		"Ashdod": "אשדוד",
+		"Ashkelon": "אשקלון",
+		"Ayalon": "איילון",
+		"Beer Sheva": "באר שבע",
+		"Givatayim": "גבעתיים",
+		"Glilot": "גלילות",
+		"Hadera": "חדרה",
+		"Haifa": "חיפה",
+		"Jerusalem": "ירושלים",
+		"Karmiel": "כרמיאל",
+		"Kfar Saba": "כפר סבא",
+		"Kiryat Ono ": "קרית אונו",
+		"Kiryon": "קריון",
+		"Modiin": "מודיעין",
+		"Nahariya": "נהריה",
+		"Natanya": "נתניה",
+		"Petah Tiqwa": "פתח תקווה",
+		"Raanana": "רעננה",
+		"Rehovot": "רחובות",
+		"Rishon Lezion": "ראשון לציון",
+		"Tel Aviv": "תל אביב",
+		"Zichron Yaakov": "זכרון יעקב",
+		"Even Yehuda": "אבן יהודה",
+		"Herzliya": "הרצליה"
 	}
 }
