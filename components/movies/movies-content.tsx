@@ -30,9 +30,18 @@ interface Filters {
 interface MoviesContentProps {
   locale?: Locale
   category?: string
+  hideFilters?: boolean
+  searchQuery?: string
+  selectedCity?: string | null
 }
 
-export function MoviesContent({ locale = 'en', category: propCategory }: MoviesContentProps) {
+export function MoviesContent({ 
+  locale = 'en', 
+  category: propCategory,
+  hideFilters = false,
+  searchQuery = '',
+  selectedCity = null
+}: MoviesContentProps) {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
@@ -48,16 +57,20 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
   const urlCategory = pathname?.split('/').pop() || ''
   const category = propCategory || urlCategory
 
-  const fetchMovies = useCallback(async (filters: Filters) => {
+  const fetchMovies = useCallback(async (filters: Filters, query = searchQuery, city = selectedCity) => {
     // Don't show loading state if filters haven't changed
-    const filtersChanged = JSON.stringify(filters) !== JSON.stringify(currentFilters.current)
+    const filtersChanged = JSON.stringify(filters) !== JSON.stringify(currentFilters.current) || 
+                           query !== searchQuery || 
+                           city !== selectedCity
+    
     if (filtersChanged) {
       setLoading(true)
     }
+    
     currentFilters.current = filters
 
     try {
-      let query = supabase.from('movies').select('*')
+      let movieQuery = supabase.from('movies').select('*')
       const now = new Date().toISOString()
       
       // Define a date 30 days ago for "now in theaters" movies
@@ -69,26 +82,82 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
       // Apply category-specific filters
       switch (category) {
         case 'latest':
-          query = query
+          movieQuery = movieQuery
             .lt('release_date', now)
             .gt('release_date', new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString())
           break
         
         case 'top-rated':
-          query = query
+          movieQuery = movieQuery
             .lt('release_date', now)
             .gte('rating', 7)
           break
           
         case 'coming-soon':
-          query = query
+          movieQuery = movieQuery
             .gt('release_date', now)
           break
           
         case 'now-in-theaters':
-          query = query
+          movieQuery = movieQuery
             .lt('release_date', now)  // Only condition: release date is in the past (already released)
           break
+      }
+
+      // Apply search query if provided
+      if (query && query.trim() !== '') {
+        // First get movies with matching titles from translations
+        const { data: translationMatches, error: searchError } = await supabase
+          .from('movie_translations')
+          .select('movie_id')
+          .ilike('title', `%${query}%`)
+        
+        if (searchError) {
+          console.error('Error searching for movies:', searchError)
+        }
+        
+        if (translationMatches && translationMatches.length > 0) {
+          const movieIds = translationMatches.map(match => match.movie_id)
+          movieQuery = movieQuery.in('id', movieIds)
+        } else {
+          // If no matches in translations, return empty result
+          setMovies([])
+          setLoading(false)
+          return
+        }
+      }
+      
+      // Apply city filter if provided
+      if (city) {
+        // Get movie IDs that have showtimes in the selected city
+        const { data: cityMovies, error: cityError } = await supabase
+          .from('movieshows')
+          .select('moviepid')
+          .eq('city', city)
+          .order('moviepid')
+        
+        if (cityError) {
+          console.error('Error filtering by city:', cityError)
+        }
+        
+        if (cityMovies && cityMovies.length > 0) {
+          // Get unique movie IDs
+          const moviePids = [...new Set(cityMovies.map(item => item.moviepid))]
+          
+          if (moviePids.length > 0) {
+            // Convert all items to strings to ensure type compatibility
+            const countitPids = moviePids.map(pid => String(pid))
+            movieQuery = movieQuery.in('countit_pid', countitPids)
+          } else {
+            setMovies([])
+            setLoading(false)
+            return
+          }
+        } else {
+          setMovies([])
+          setLoading(false)
+          return
+        }
       }
 
       // Apply user filters
@@ -99,7 +168,7 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
           .in('genre_id', filters.genres)
         
         if (movieIds && movieIds.length > 0) {
-          query = query.in('id', movieIds.map(item => item.movie_id))
+          movieQuery = movieQuery.in('id', movieIds.map(item => item.movie_id))
         } else {
           setMovies([])
           setLoading(false)
@@ -108,19 +177,20 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
       }
 
       if (filters.year) {
-        query = query
+        movieQuery = movieQuery
           .gte('release_date', `${filters.year}-01-01`)
           .lte('release_date', `${filters.year}-12-31`)
       }
 
       if (filters.rating) {
-        query = query.gte('rating', filters.rating)
+        movieQuery = movieQuery.gte('rating', filters.rating)
       }
 
       // Apply sorting
-      query = query.order(filters.sortBy, { ascending: filters.sortOrder === 'asc' })
+      movieQuery = movieQuery.order(filters.sortBy, { ascending: filters.sortOrder === 'asc' })
 
-      const { data, error } = await query
+      // Execute the query
+      const { data, error } = await movieQuery
 
       if (error) throw error
       
@@ -179,13 +249,11 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
       console.error('Error fetching movies:', error)
       setMovies([])
     } finally {
-      // Only update loading state if these are still the current filters
-      if (JSON.stringify(filters) === JSON.stringify(currentFilters.current)) {
-        setLoading(false)
-      }
+      setLoading(false)
     }
-  }, [category, supabase, locale])
+  }, [category, supabase, locale, searchQuery, selectedCity])
 
+  // Re-fetch when search or city changes
   useEffect(() => {
     const initialFilters: Filters = {
       genres: [],
@@ -193,12 +261,15 @@ export function MoviesContent({ locale = 'en', category: propCategory }: MoviesC
       sortOrder: category === 'coming-soon' ? 'asc' : 'desc'
     }
 
-    fetchMovies(initialFilters)
-  }, [category, fetchMovies])
+    fetchMovies(initialFilters, searchQuery, selectedCity)
+  }, [category, fetchMovies, searchQuery, selectedCity])
 
   return (
     <div className="space-y-8">
-      <MovieFilters onFilterChange={fetchMovies} locale={locale} />
+      {!hideFilters && (
+        <MovieFilters onFilterChange={fetchMovies} locale={locale} />
+      )}
+      
       <div className="min-h-[400px]">
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

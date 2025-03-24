@@ -68,7 +68,12 @@
 			"meetActors": "Meet the Actors"
 		},
 		"nowInTheaters": "Now in Theaters",
-		"nowInTheatersSubtitle": "Discover movies currently showing in theaters"
+		"nowInTheatersSubtitle": "Discover movies currently showing in theaters",
+		"search": {
+			"searchPlaceholder": "Search movie, actor or venue",
+			"selectCity": "Choose City",
+			"allCities": "All Cities"
+		}
 	},
 	"theaters": {
 		"theaters": "Theaters",

@@ -68,7 +68,12 @@
 			"meetActors": "פגוש את השחקנים"
 		},
 		"nowInTheaters": "מציג כעת בקולנוע",
-		"nowInTheatersSubtitle": "גלה סרטים המוקרנים כעת בבתי הקולנוע"
+		"nowInTheatersSubtitle": "גלה סרטים המוקרנים כעת בבתי הקולנוע",
+		"search": {
+			"searchPlaceholder": "חפש סרט, שחקן או מיקום",
+			"selectCity": "בחר עיר",
+			"allCities": "כל הערים"
+		}
 	},
 	"theaters": {
 		"theaters": "בתי קולנוע",
