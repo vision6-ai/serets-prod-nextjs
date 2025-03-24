@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
 
 // External API URL
 const SHOWTIMES_API_URL =
-	'https://admin.countit.online/api/v2/getview/showtimes_webSite/2000/ISRAEL';
+	'https://admin.countit.online/api/v2/getview/showtimes_webSite/5000/ISRAEL';
 const API_KEY = process.env.SHOWTIMES_API_KEY;
 
 // Function to fetch showtimes from external API

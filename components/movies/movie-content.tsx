@@ -3,7 +3,7 @@
 import { useAuth } from '@/components/auth/auth-provider';
 import { MovieActions } from './movie-actions';
 import { MovieSlider } from './movie-slider';
-import { TicketBooking } from './ticket-booking';
+import { TicketBooking } from '.';
 import type { Movie } from '@/types/movie';
 import { Locale } from '@/config/i18n';
 import { useTranslations } from 'next-intl';
@@ -60,8 +60,12 @@ export function MovieContent({
 	const trailer = videos.find((v) => v.type === 'trailer');
 	const isRtl = locale === 'he';
 	const t = useTranslations('movies');
-	
-	console.log(`🎬 MovieContent: Received ${similarMovies?.length || 0} similarMovies/recommendations`);
+
+	console.log(
+		`🎬 MovieContent: Received ${
+			similarMovies?.length || 0
+		} similarMovies/recommendations`
+	);
 
 	return (
 		<div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
