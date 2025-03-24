@@ -174,5 +174,30 @@
 		"notFoundDesc": "לא הצלחנו למצוא את הז'אנר שביקשת.",
 		"movieCount": "יש {count} סרטים בז'אנר זה.",
 		"noMovies": "אין סרטים זמינים בז'אנר זה."
+	},
+	"footer": {
+		"categories": "קטגוריות",
+		"topMovies": "סרטים מובילים",
+		"resources": "משאבים",
+		"legal": "משפטי",
+		"latestReleases": "סרטים חדשים",
+		"topRated": "מדורגים גבוה",
+		"awardWinners": "זוכי פרסים",
+		"comingSoon": "בקרוב",
+		"aboutUs": "אודותינו",
+		"blog": "בלוג",
+		"contact": "צור קשר",
+		"sitemap": "מפת אתר",
+		"privacyPolicy": "מדיניות פרטיות",
+		"termsOfService": "תנאי שימוש",
+		"cookiePolicy": "מדיניות עוגיות",
+		"dmca": "זכויות יוצרים",
+		"builtBy": "נבנה על ידי ינון",
+		"allRightsReserved": "© {year} סרט-טיים. כל הזכויות שמורות.",
+		"socialMedia": {
+			"twitter": "טוויטר",
+			"facebook": "פייסבוק",
+			"instagram": "אינסטגרם"
+		}
 	}
 }

@@ -28,36 +28,49 @@ import { fetchWithRetry } from '@/lib/supabase'
 import { Button } from './ui/button'
 
 // Fetch functions
-const fetchCategories = async (): Promise<Genre[]> => {
+const fetchCategories = async (locale: string): Promise<Genre[]> => {
   try {
     const client = createClientComponentClient()
     
-    // Use fetchWithRetry to make this more reliable
-    const { data, error } = await fetchWithRetry(async () => {
+    // First get all genres
+    const { data: genresData, error: genresError } = await fetchWithRetry(async () => {
       const response = await client
         .from('genres')
-        .select(`
-          id, 
-          slug,
-          translations:genre_translations(name)
-        `)
-        .eq('translations.language_code', 'en')
+        .select('id, slug')
         .order('slug');
       return response;
     });
     
-    if (error) {
-      console.error('Error fetching categories:', error.message)
+    if (genresError) {
+      console.error('Error fetching genres:', genresError)
       return []
     }
     
-    // Transform the data to match the expected format
-    const transformedData = data?.map((genre: { id: string; slug: string; translations: { name: string }[] }) => ({
+    // Then get translations for the current locale
+    const { data: translations, error: translationsError } = await fetchWithRetry(async () => {
+      const response = await client
+        .from('genre_translations')
+        .select('genre_id, name')
+        .eq('language_code', locale)
+        .in('genre_id', genresData.map((g: { id: string }) => g.id));
+      return response;
+    });
+    
+    if (translationsError) {
+      console.error('Error fetching genre translations:', translationsError)
+    }
+    
+    // Create a translation map
+    const translationMap = new Map()
+    translations?.forEach((trans: { genre_id: string, name: string }) => {
+      translationMap.set(trans.genre_id, trans.name)
+    })
+    
+    // Transform the data with translations in the current locale
+    const transformedData = genresData.map((genre: { id: string, slug: string }) => ({
       id: genre.id,
       slug: genre.slug,
-      name: genre.translations && genre.translations.length > 0 
-        ? genre.translations[0].name 
-        : genre.slug // Fallback to slug if no translation
+      name: translationMap.get(genre.id) || genre.slug // Fall back to slug if no translation
     })) as Genre[] || []
     
     return transformedData
@@ -136,11 +149,15 @@ export default function HeaderClient({ locale }: { locale: string }) {
   const isRtl = locale === 'he'
 
   // Fetch data with SWR
-  const { data: categories = [], error: categoriesError } = useSWR<Genre[]>('categories', fetchCategories, {
-    fallbackData: [], // Provide fallback data to avoid null issues
-    revalidateOnFocus: false,
-    dedupingInterval: 60000, // 1 minute
-  })
+  const { data: categories = [], error: categoriesError } = useSWR<Genre[]>(
+    ['categories', locale], 
+    () => fetchCategories(locale), 
+    {
+      fallbackData: [], // Provide fallback data to avoid null issues
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // 1 minute
+    }
+  )
   
   useEffect(() => {
     if (categoriesError) {

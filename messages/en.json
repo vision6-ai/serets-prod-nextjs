@@ -174,5 +174,30 @@
 		"notFoundDesc": "We couldn't find the genre you requested.",
 		"movieCount": "There are {count} movies in this genre.",
 		"noMovies": "No movies available in this genre."
+	},
+	"footer": {
+		"categories": "Categories",
+		"topMovies": "Top Movies",
+		"resources": "Resources",
+		"legal": "Legal",
+		"latestReleases": "Latest Releases",
+		"topRated": "Top Rated",
+		"awardWinners": "Award Winners",
+		"comingSoon": "Coming Soon",
+		"aboutUs": "About Us",
+		"blog": "Blog",
+		"contact": "Contact",
+		"sitemap": "Sitemap",
+		"privacyPolicy": "Privacy Policy",
+		"termsOfService": "Terms of Service",
+		"cookiePolicy": "Cookie Policy",
+		"dmca": "DMCA",
+		"builtBy": "Built by Yinon",
+		"allRightsReserved": "© {year} MovieTime. All rights reserved.",
+		"socialMedia": {
+			"twitter": "Twitter",
+			"facebook": "Facebook",
+			"instagram": "Instagram"
+		}
 	}
 }
