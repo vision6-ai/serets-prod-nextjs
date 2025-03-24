@@ -308,7 +308,7 @@ export function TicketBooking({
 					<Button
 						size="lg"
 						className={cn(
-							'w-full md:w-auto text-lg gap-2 h-12',
+							'hidden md:flex w-full md:w-auto text-lg gap-2 h-12',
 							'transition-all duration-200 hover:scale-105',
 							'shadow-lg hover:shadow-xl'
 						)}>
