@@ -216,10 +216,10 @@
 		"Hadera": "Hadera",
 		"Haifa": "Haifa",
 		"Jerusalem": "Jerusalem",
-		"Karmiel": "Karmiel", 
+		"Karmiel": "Karmiel",
 		"Kfar Saba": "Kfar Saba",
-		"Kiryat Ono": "Kiryat Ono",
-		"Kiryon": "Kiryon",
+		"Kiryat Ono ": "Kiryat Ono",
+		"Kiryon": "Krayot",
 		"Modiin": "Modiin",
 		"Nahariya": "Nahariya",
 		"Natanya": "Natanya",
@@ -228,6 +228,8 @@
 		"Rehovot": "Rehovot",
 		"Rishon Lezion": "Rishon Lezion",
 		"Tel Aviv": "Tel Aviv",
-		"Zichron Yaakov": "Zichron Yaakov"
+		"Zichron Yaakov": "Zichron Yaakov",
+		"Even Yehuda": "Even Yehuda",
+		"Herzliya": "Herzliya"
 	}
 }

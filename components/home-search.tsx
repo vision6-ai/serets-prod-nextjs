@@ -56,86 +56,40 @@ export function HomeSearch({ locale, onSearch }: HomeSearchProps) {
 		}
 	}, [onSearch]);
 
-	// Add global style for dropdown width and handle window resize
+	// Add styles for the dropdown
 	useEffect(() => {
-		// Set default dropdown width
-		document.documentElement.style.setProperty('--city-selector-width', '100%');
-
-		// Add custom styles for dropdown portals - with extreme !important rules
+		// Add custom styles for dropdown
 		const style = document.createElement('style');
 		style.textContent = `
-      [data-radix-select-content],
-      [data-radix-select-content][data-side="bottom"],
-      [data-radix-select-content][data-state="open"],
-      .select-dropdown[data-radix-select-content] {
-        left: 0 !important;
-        right: 0 !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-        transform: none !important;
-        position: fixed !important;
-        width: var(--city-selector-width, 90vw) !important;
-        max-width: 500px !important;
-        top: var(--city-selector-top, 120px) !important;
-        border-radius: 8px !important;
-        border: 1px solid #333 !important;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
-        padding: 0 !important;
-        background-color: #000 !important;
+      .city-select-content {
+        background-color: #000;
+        border: 1px solid #333;
+        border-radius: 8px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        max-width: 500px;
+        width: 100%;
       }
       
-      [data-radix-select-content] [role="option"] {
-        padding: 16px 20px !important;
-        color: white !important;
-        font-size: 18px !important;
-        border-bottom: 1px solid rgba(255,255,255,0.1) !important;
-        line-height: 1.5 !important;
+      .city-select-content [role="option"] {
+        padding: 16px 20px;
+        color: white;
+        font-size: 18px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        line-height: 1.5;
       }
       
-      [data-radix-select-content] [role="option"]:last-child {
-        border-bottom: none !important;
+      .city-select-content [role="option"]:last-child {
+        border-bottom: none;
       }
       
-      [data-radix-select-content] [role="option"][data-highlighted] {
-        background-color: rgba(255,255,255,0.05) !important;
-      }
-      
-      [data-radix-select-content] [data-radix-select-viewport] {
-        padding: 0 !important;
+      .city-select-content [role="option"][data-highlighted] {
+        background-color: rgba(255,255,255,0.05);
       }
     `;
 		document.head.appendChild(style);
 
-		// Update measurements on mount and resize
-		const updateMeasurements = () => {
-			const cityField = document.querySelector('.city-selector-field');
-			if (cityField) {
-				const rect = cityField.getBoundingClientRect();
-				const width = rect.width;
-				const topPosition = rect.bottom + window.scrollY + 8;
-
-				document.documentElement.style.setProperty(
-					'--city-selector-width',
-					`${width}px`
-				);
-				document.documentElement.style.setProperty(
-					'--city-selector-top',
-					`${topPosition}px`
-				);
-			}
-		};
-
-		// Add resize event listener
-		window.addEventListener('resize', updateMeasurements);
-
-		// Initial call
-		updateMeasurements();
-
 		// Clean up
 		return () => {
-			document.documentElement.style.removeProperty('--city-selector-width');
-			document.documentElement.style.removeProperty('--city-selector-top');
-			window.removeEventListener('resize', updateMeasurements);
 			document.head.removeChild(style);
 		};
 	}, []);
@@ -241,107 +195,36 @@ export function HomeSearch({ locale, onSearch }: HomeSearchProps) {
 
 			{/* City Selector */}
 			<div className="relative">
-				{/* Use a custom styled select for better RTL support */}
-				<div className="relative">
-					<div
+				<Select
+					value={selectedCity || 'all'}
+					onValueChange={handleCityChange}
+					dir={isRtl ? 'rtl' : 'ltr'}>
+					<SelectTrigger
 						className={cn(
-							'city-selector-field relative h-12 rounded-md border border-input bg-card shadow-sm flex items-center cursor-pointer',
-							isRtl ? 'pr-4 pl-12 flex-row-reverse' : 'pl-4 pr-10'
-						)}
-						ref={(node) => {
-							// Immediately set the width variable when this component mounts
-							if (node) {
-								const rect = node.getBoundingClientRect();
-								document.documentElement.style.setProperty(
-									'--city-selector-width',
-									`${rect.width}px`
-								);
-							}
-						}}
-						onClick={() => {
-							// Create a click event on the actual select trigger which is hidden
-							const selectTrigger = document.getElementById(
-								'city-select-trigger'
-							);
-
-							// Update the width measurement on each click as well
-							const cityField = document.querySelector('.city-selector-field');
-							if (cityField) {
-								const rect = cityField.getBoundingClientRect();
-								document.documentElement.style.setProperty(
-									'--city-selector-width',
-									`${rect.width}px`
-								);
-
-								// Calculate and set top position for dropdown
-								const topPosition = rect.bottom + window.scrollY + 4; // 4px spacing to match screenshot
-								document.documentElement.style.setProperty(
-									'--city-selector-top',
-									`${topPosition}px`
-								);
-							}
-
-							selectTrigger?.click();
-						}}>
-						<MapPin
-							className={cn(
-								'h-5 w-5 text-muted-foreground',
-								isRtl ? 'ml-3' : 'mr-2'
-							)}
-						/>
-						<span
-							className={cn(
-								'text-sm text-muted-foreground flex-1',
-								isRtl ? 'text-right' : 'text-left'
-							)}>
-							{getTranslatedCity(selectedCity)}
-						</span>
-						<div
-							className={cn(
-								'absolute inset-y-0 flex items-center pointer-events-none',
-								isRtl ? 'left-4' : 'right-3'
-							)}>
-							<svg
-								width="12"
-								height="12"
-								viewBox="0 0 12 12"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg">
-								<path
-									d="M1.5 3.75L6 8.25L10.5 3.75"
-									stroke="currentColor"
-									strokeWidth="1.5"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-								/>
-							</svg>
+							'h-12 bg-card border-input shadow-sm flex items-center',
+							isRtl ? 'flex-row-reverse text-right' : 'text-left'
+						)}>
+						<div className="flex items-center">
+							<MapPin
+								className={cn(
+									'h-5 w-5 text-muted-foreground',
+									isRtl ? 'ml-3' : 'mr-2'
+								)}
+							/>
+							<SelectValue placeholder={t('selectCity')}>
+								{getTranslatedCity(selectedCity)}
+							</SelectValue>
 						</div>
-					</div>
-
-					{/* The actual Select component is visually hidden but provides functionality */}
-					<div className="sr-only">
-						<Select
-							value={selectedCity || 'all'}
-							onValueChange={handleCityChange}
-							dir={isRtl ? 'rtl' : 'ltr'}>
-							<SelectTrigger id="city-select-trigger">
-								<SelectValue placeholder={t('selectCity')} />
-							</SelectTrigger>
-							<SelectContent
-								className="select-dropdown"
-								onCloseAutoFocus={(e: Event) => {
-									e.preventDefault();
-								}}>
-								<SelectItem value="all">{t('allCities')}</SelectItem>
-								{cities.map((city) => (
-									<SelectItem key={city} value={city}>
-										{getTranslatedCity(city)}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-				</div>
+					</SelectTrigger>
+					<SelectContent className="city-select-content">
+						<SelectItem value="all">{t('allCities')}</SelectItem>
+						{cities.map((city) => (
+							<SelectItem key={city} value={city}>
+								{getTranslatedCity(city)}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
 			</div>
 		</div>
 	);
