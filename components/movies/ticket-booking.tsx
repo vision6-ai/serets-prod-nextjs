@@ -112,6 +112,16 @@ export function TicketBooking({
 
 			setAvailableCities(cities);
 
+			// Check if user's preferred city is available for this movie
+			if (typeof window !== 'undefined' && cities.length > 0) {
+				const savedCity = localStorage.getItem('selectedCity');
+				if (savedCity && cities.includes(savedCity)) {
+					console.log('🎯 [Auto-select] Using saved city preference:', savedCity);
+					setSelectedCity(savedCity);
+					return;
+				}
+			}
+
 			// Auto-select city if only one available
 			if (cities.length === 1) {
 				console.log('🎯 [Auto-select] Single city available:', cities[0]);
@@ -253,6 +263,15 @@ export function TicketBooking({
 	useEffect(() => {
 		if (open && countitPid) {
 			fetchCities();
+			
+			// Try to load the saved city from localStorage when the dialog opens
+			if (typeof window !== 'undefined') {
+				const savedCity = localStorage.getItem('selectedCity');
+				if (savedCity) {
+					// We'll set it after we confirm it's available for this movie
+					console.log('Found saved city preference:', savedCity);
+				}
+			}
 		} else {
 			// Reset states when dialog is closed
 			setSelectedCity(null);
@@ -281,6 +300,12 @@ export function TicketBooking({
 		setSelectedCity(value);
 		setSelectedDate(null);
 		setSelectedShow(null);
+		
+		// Save city preference to localStorage
+		if (typeof window !== 'undefined') {
+			localStorage.setItem('selectedCity', value);
+			console.log('💾 [Storage] Saved city preference:', value);
+		}
 	};
 
 	const handleDateChange = (value: string) => {

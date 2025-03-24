@@ -112,7 +112,12 @@ export function HeroSection() {
                   >
                     <SelectValue placeholder="All locations" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent
+                    align={isRtl ? "end" : "start"}
+                    sideOffset={2}
+                    side="bottom"
+                    className="w-screen max-w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]"
+                  >
                     <SelectItem value="all">All locations</SelectItem>
                     <SelectItem value="tel-aviv">Tel Aviv</SelectItem>
                     <SelectItem value="jerusalem">Jerusalem</SelectItem>
