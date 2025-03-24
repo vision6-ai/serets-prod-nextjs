@@ -10,9 +10,10 @@ import {
 } from '@/components/ui/carousel'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ChevronLeft } from 'lucide-react'
 import type { Movie } from '@/types/movie'
 import { Locale } from '@/config/i18n'
+import { cn } from '@/lib/utils'
 
 interface MovieSliderProps {
   movies: Movie[]
@@ -22,17 +23,35 @@ interface MovieSliderProps {
   viewAllHref?: string
 }
 
-export function MovieSlider({ movies, locale, title, loading, viewAllHref }: MovieSliderProps) {
+export function MovieSlider({ movies, locale = 'en', title, loading, viewAllHref }: MovieSliderProps) {
+  const isRtl = locale === 'he';
+  
   return (
     <div className="space-y-4">
       {/* Title and View All link */}
       {title && (
-        <div className="flex justify-between items-center">
+        <div className={cn(
+          "flex justify-between items-center",
+          isRtl && "flex-row-reverse"
+        )}>
           <h2 className="text-2xl font-bold">{title}</h2>
           {viewAllHref && (
             <Button variant="ghost" size="sm" asChild>
-              <Link href={viewAllHref} className="flex items-center">
-                View All <ChevronRight className="ml-1 h-4 w-4" />
+              <Link href={viewAllHref} className={cn(
+                "flex items-center",
+                isRtl && "flex-row-reverse"
+              )}>
+                {isRtl ? (
+                  <>
+                    <ChevronLeft className="mr-1 h-4 w-4" />
+                    View All
+                  </>
+                ) : (
+                  <>
+                    View All
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </>
+                )}
               </Link>
             </Button>
           )}
@@ -44,14 +63,23 @@ export function MovieSlider({ movies, locale, title, loading, viewAllHref }: Mov
         opts={{
           align: 'start',
           loop: true,
+          direction: isRtl ? 'rtl' : 'ltr',
+          // Start with more slides visible by default to fix the RTL single slide issue
+          slidesToScroll: 2
         }}
         className="w-full overflow-x-hidden"
+        dir={isRtl ? 'rtl' : 'ltr'}
       >
-        <CarouselContent className="-ml-2 md:-ml-4">
+        <CarouselContent className={cn(
+          isRtl ? "-mr-2 md:-mr-4" : "-ml-2 md:-ml-4"
+        )}>
           {movies.map((movie) => (
             <CarouselItem
               key={movie.id}
-              className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5"
+              className={cn(
+                isRtl ? "pr-2 md:pr-4" : "pl-2 md:pl-4",
+                "basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5"
+              )}
             >
               <Link 
                 href={`/movies/${movie.slug}`}
@@ -72,7 +100,10 @@ export function MovieSlider({ movies, locale, title, loading, viewAllHref }: Mov
                     </div>
                   )}
                 </div>
-                <div className="space-y-1 p-2">
+                <div className={cn(
+                  "space-y-1 p-2",
+                  isRtl && "text-right"
+                )}>
                   <h3 className="font-semibold leading-none">
                     {movie.title}
                   </h3>
@@ -82,7 +113,10 @@ export function MovieSlider({ movies, locale, title, loading, viewAllHref }: Mov
                     </p>
                   )}
                   {movie.rating && (
-                    <div className="flex items-center gap-1">
+                    <div className={cn(
+                      "flex items-center gap-1",
+                      isRtl && "flex-row-reverse justify-end"
+                    )}>
                       <span className="text-sm font-medium">
                         {movie.rating.toFixed(1)}
                       </span>
@@ -99,8 +133,14 @@ export function MovieSlider({ movies, locale, title, loading, viewAllHref }: Mov
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
+        <CarouselPrevious className={cn(
+          isRtl ? "-right-12" : "-left-12",
+          "md:flex hidden"
+        )} />
+        <CarouselNext className={cn(
+          isRtl ? "-left-12" : "-right-12", 
+          "md:flex hidden"
+        )} />
       </Carousel>
     </div>
   )
