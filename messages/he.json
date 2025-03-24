@@ -167,7 +167,8 @@
 		"showing_count": "מציג {shown} מתוך {total} סרטים",
 		"no_results": "לא נמצאו סרטים התואמים את המסננים שלך.",
 		"latestReleases": "סרטים חדשים",
-		"topRated": "מדורגים גבוה"
+		"topRated": "מדורגים גבוה",
+		"recommendedMovies": "סרטים מומלצים"
 	},
 	"genres": {
 		"notFound": "ז'אנר לא נמצא",

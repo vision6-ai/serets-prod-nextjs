@@ -6,6 +6,7 @@ import { Database } from '@/types/supabase-types';
 import { Locale } from '@/config/i18n';
 import { unstable_setRequestLocale } from 'next-intl/server';
 import type { Movie } from '@/types/movie';
+import { getRecommendedMovies } from '@/lib/recommendations';
 
 export const revalidate = 3600;
 
@@ -256,8 +257,9 @@ async function getMovieData(slug: string, locale: Locale) {
 		})
 		.filter(Boolean);
 
-	// For now, we don't have similar movies
-	const similarMovies: Movie[] = [];
+	// Fetch recommended movies 
+	const recommendedMovies = await getRecommendedMovies(movie.id, locale, 10);
+	console.log(`📌 Movie page (${slug}): Got ${recommendedMovies.length} recommended movies`);
 
 	return {
 		movie: movieWithTranslations,
@@ -283,7 +285,7 @@ async function getMovieData(slug: string, locale: Locale) {
 			year: Number(item!.year),
 			is_winner: Boolean(item!.is_winner),
 		})),
-		similarMovies,
+		similarMovies: recommendedMovies,
 	};
 }
 

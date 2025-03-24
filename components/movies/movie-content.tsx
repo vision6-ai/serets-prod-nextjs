@@ -6,6 +6,7 @@ import { MovieSlider } from './movie-slider';
 import { TicketBooking } from './ticket-booking';
 import type { Movie } from '@/types/movie';
 import { Locale } from '@/config/i18n';
+import { useTranslations } from 'next-intl';
 
 interface MovieContentProps {
 	movie: Movie & {
@@ -58,6 +59,9 @@ export function MovieContent({
 	const { user } = useAuth();
 	const trailer = videos.find((v) => v.type === 'trailer');
 	const isRtl = locale === 'he';
+	const t = useTranslations('movies');
+	
+	console.log(`🎬 MovieContent: Received ${similarMovies?.length || 0} similarMovies/recommendations`);
 
 	return (
 		<div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
@@ -183,10 +187,12 @@ export function MovieContent({
 				</section>
 			)}
 
-			{/* Similar Movies */}
+			{/* Recommended Movies */}
 			{similarMovies.length > 0 && (
 				<section>
-					<h2 className="text-2xl font-semibold mb-6">Similar Movies</h2>
+					<h2 className="text-2xl font-semibold mb-6">
+						{t('recommendedMovies')}
+					</h2>
 					<MovieSlider movies={similarMovies} locale={locale as Locale} />
 				</section>
 			)}

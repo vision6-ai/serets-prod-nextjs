@@ -167,7 +167,8 @@
 		"showing_count": "Showing {shown} of {total} movies",
 		"no_results": "No movies found matching your filters.",
 		"latestReleases": "Latest Releases",
-		"topRated": "Top Rated"
+		"topRated": "Top Rated",
+		"recommendedMovies": "Recommended Movies"
 	},
 	"genres": {
 		"notFound": "Genre not found",
