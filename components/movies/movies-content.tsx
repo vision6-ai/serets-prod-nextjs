@@ -19,6 +19,22 @@ interface Movie {
 	trailer_url: string | null;
 }
 
+interface TheaterMovie {
+	id: string;
+	moviepid: number;
+	original_title: string;
+	screenings_count: number;
+	slug: string;
+	countit_pid?: string;
+	created_at?: string;
+	updated_at?: string;
+	duration?: number;
+	imdb_id?: string;
+	release_date?: string;
+	rating?: number;
+	themoviedb_id?: string;
+}
+
 interface Filters {
 	genres: Array<string>;
 	year?: number | null;
@@ -104,16 +120,6 @@ export function MoviesContent({
 					}
 				}
 
-				// Define a date 30 days ago for "now in theaters" movies
-				const thirtyDaysAgo = new Date(
-					Date.now() - 30 * 24 * 60 * 60 * 1000
-				).toISOString();
-
-				// Define a date 180 days ago for a wider range
-				const sixMonthsAgo = new Date(
-					Date.now() - 180 * 24 * 60 * 60 * 1000
-				).toISOString();
-
 				// Apply category-specific filters
 				switch (category) {
 					case 'latest':
@@ -148,6 +154,85 @@ export function MoviesContent({
 								'Error fetching movie showtime counts:',
 								storedProcError
 							);
+							break;
+						}
+
+						// If we have movies in theaters, use them directly instead of continuing with the regular query
+						if (currentMoviesInTheaters && currentMoviesInTheaters.length > 0) {
+							// Get movie details for each movie in theaters
+							const theaterMoviesWithDetails = await Promise.all(
+								currentMoviesInTheaters.map(async (theaterMovie: TheaterMovie) => {
+									// Get the movie from the movies table using the id from the theater movie
+									const { data: movieData } = await supabase
+										.from('movies')
+										.select('*')
+										.eq('id', theaterMovie.id)
+										.single();
+
+									// If movie data not found, try looking up by countit_pid
+									let finalMovieData = movieData;
+									if (!finalMovieData && theaterMovie.moviepid) {
+										const { data: movieByPid } = await supabase
+											.from('movies')
+											.select('*')
+											.eq('countit_pid', theaterMovie.moviepid.toString())
+											.single();
+										
+										finalMovieData = movieByPid;
+									}
+
+									if (!finalMovieData) return null;
+
+									// Get translations for this movie
+									const { data: translations } = await supabase
+										.from('movie_translations')
+										.select('title, synopsis, poster_url, trailer_url, language_code, movie_id')
+										.eq('movie_id', finalMovieData.id)
+										.eq('language_code', locale)
+										.single();
+
+									// If no translation in requested locale, try to get English translation
+									if (!translations) {
+										const { data: enTranslations } = await supabase
+											.from('movie_translations')
+											.select('title, synopsis, poster_url, trailer_url, language_code, movie_id')
+											.eq('movie_id', finalMovieData.id)
+											.eq('language_code', 'en')
+											.single();
+
+										return {
+											...finalMovieData,
+											title: enTranslations?.title || finalMovieData.title || theaterMovie.original_title,
+											hebrew_title: locale === 'he' ? enTranslations?.title : finalMovieData.hebrew_title,
+											synopsis: enTranslations?.synopsis || finalMovieData.synopsis,
+											poster_url: enTranslations?.poster_url || null,
+											screenings_count: theaterMovie.screenings_count
+										};
+									}
+
+									// Return movie with translations
+									return {
+										...finalMovieData,
+										title: translations.title || finalMovieData.title || theaterMovie.original_title,
+										hebrew_title: locale === 'he' ? translations.title : finalMovieData.hebrew_title,
+										synopsis: translations.synopsis || finalMovieData.synopsis,
+										poster_url: translations.poster_url || null,
+										screenings_count: theaterMovie.screenings_count
+									};
+								})
+							);
+
+							// Filter out any nulls and set the movies
+							const validMovies = theaterMoviesWithDetails.filter(movie => movie !== null);
+							
+							// Sort movies by screenings_count in descending order
+							const sortedMovies = validMovies.sort((a, b) => 
+								(b.screenings_count || 0) - (a.screenings_count || 0)
+							);
+							
+							setMovies(sortedMovies);
+							setLoading(false);
+							return;
 						}
 						break;
 				}

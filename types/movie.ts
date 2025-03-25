@@ -9,4 +9,5 @@ export interface Movie {
 	poster_url: string | null;
 	slug: string;
 	countit_pid?: string | null;
+	screenings_count?: number;
 }

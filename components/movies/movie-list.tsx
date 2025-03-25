@@ -52,6 +52,13 @@ export function MovieList({ movies, locale = 'en' }: MovieListProps) {
 									</svg>
 								</div>
 							)}
+							{/* {movie.screenings_count && (
+								<div className="flex items-center gap-1">
+									<span className="text-sm text-muted-foreground">
+										{movie.screenings_count} screenings
+									</span>
+								</div>
+							)} */}
 						</div>
 					</Link>
 				);
