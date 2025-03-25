@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "deploy": "supabase functions deploy enrich-actors"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window"]
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+} 
