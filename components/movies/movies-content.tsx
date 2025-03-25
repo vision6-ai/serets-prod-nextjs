@@ -134,84 +134,20 @@ export function MoviesContent({
 						break;
 
 					case 'now-in-theaters':
-						// Get current date and time
-						const currentDate = new Date();
-						const currentFormattedDate = currentDate
-							.toISOString()
-							.split('T')[0];
-						const currentTime = currentDate
-							.toTimeString()
-							.split(' ')[0]
-							.substring(0, 5);
-
-						console.log('Current formatted date:', currentFormattedDate);
-						console.log('Current time:', currentTime);
-
-						// We still want released movies
-						movieQuery = movieQuery.lt('release_date', now);
-
-						// But instead of relying only on the basic query above, we'll find movies with upcoming showtimes
-						// Using 'day' instead of 'date'
-						const showtimeQuery = `day.gt.${currentFormattedDate},and(day.eq.${currentFormattedDate},time.gt.${currentTime})`;
-						console.log('Showtime query:', showtimeQuery);
-
-						const { data: currentMoviesInTheaters, error: theaterError } =
-							await supabase
-								.from('movieshows')
-								.select('moviepid')
-								.or(showtimeQuery);
+						// Call the stored procedure to get movie showtime counts
+						const { data: currentMoviesInTheaters, error: storedProcError } =
+							await supabase.rpc('get_movie_showtime_counts');
 
 						console.log(
-							'Current movies in theaters query result:',
+							'Movie showtime counts from stored procedure:',
 							currentMoviesInTheaters
 						);
 
-						if (theaterError) {
+						if (storedProcError) {
 							console.error(
-								'Error fetching current movies in theaters:',
-								theaterError
+								'Error fetching movie showtime counts:',
+								storedProcError
 							);
-						}
-
-						if (currentMoviesInTheaters && currentMoviesInTheaters.length > 0) {
-							// Get unique movie IDs with non-passed showtimes
-							const moviePidsInTheaters = [
-								...new Set(
-									currentMoviesInTheaters.map((item) => item.moviepid)
-								),
-							];
-
-							console.log(
-								'Unique movie PIDs in theaters:',
-								moviePidsInTheaters
-							);
-
-							if (moviePidsInTheaters.length > 0) {
-								// Convert moviepid values to strings to match countit_pid format
-								const countitPidsInTheaters = moviePidsInTheaters.map((pid) =>
-									String(pid)
-								);
-								console.log(
-									'Countit PIDs for movies in theaters:',
-									countitPidsInTheaters
-								);
-
-								movieQuery = movieQuery.in(
-									'countit_pid',
-									countitPidsInTheaters
-								);
-							} else {
-								console.log('No unique movie PIDs found for theaters');
-								setMovies([]);
-								setLoading(false);
-								return;
-							}
-						} else {
-							// No current movies with showtimes found
-							console.log('No current movies with showtimes found');
-							setMovies([]);
-							setLoading(false);
-							return;
 						}
 						break;
 				}
@@ -330,12 +266,6 @@ export function MoviesContent({
 								.eq('movie_id', movie.id)
 								.eq('language_code', locale)
 								.single();
-
-							console.log(`Movie ${movie.id} original data:`, movie);
-							console.log(
-								`Movie ${movie.id} translations for ${locale}:`,
-								translations
-							);
 
 							// If no translation in requested locale, try to get English translation
 							if (!translations) {
