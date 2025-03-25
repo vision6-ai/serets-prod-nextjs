@@ -141,8 +141,13 @@ export function MoviesContent({
 
 					case 'now-in-theaters':
 						// Call the stored procedure to get movie showtime counts
+						// If city is selected, pass it to the RPC function
 						const { data: currentMoviesInTheaters, error: storedProcError } =
-							await supabase.rpc('get_movie_showtime_counts');
+							city
+								? await supabase.rpc('get_movie_showtime_counts', {
+										city_filter: city,
+								  })
+								: await supabase.rpc('get_movie_showtime_counts');
 
 						console.log(
 							'Movie showtime counts from stored procedure:',
@@ -287,38 +292,8 @@ export function MoviesContent({
 								console.log('After search filter:', filteredMovies.length);
 							}
 
-							// Apply city filter if provided
-							if (city) {
-								// Get movie IDs that have showtimes in the selected city
-								const { data: cityMovies, error: cityError } = await supabase
-									.from('movieshows')
-									.select('moviepid')
-									.eq('city', city)
-									.order('moviepid');
-
-								if (cityError) {
-									console.error('Error filtering by city:', cityError);
-								}
-
-								if (cityMovies && cityMovies.length > 0) {
-									// Get unique movie IDs
-									const moviePids = [
-										...new Set(cityMovies.map((item) => item.moviepid)),
-									];
-
-									if (moviePids.length > 0) {
-										// Filter the sorted movies to only include those with matching PIDs
-										filteredMovies = filteredMovies.filter((movie) =>
-											moviePids.some((pid) => movie.countit_pid === String(pid))
-										);
-										console.log('After city filter:', filteredMovies.length);
-									} else {
-										filteredMovies = [];
-									}
-								} else {
-									filteredMovies = [];
-								}
-							}
+							// City filtering is now handled by the RPC function
+							// No need to filter by city again
 
 							// Apply genre filter if provided
 							if (filters.genres.length > 0) {
