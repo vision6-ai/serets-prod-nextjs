@@ -8,8 +8,8 @@
 	"cleanUrls": true,
 	"crons": [
 		{
-			"path": "/api/movieshows?fetchAll=true",
-			"schedule": "0 0 * * *"
+			"path": "/api/movieshows/sync",
+			"schedule": "0 */3 * * *"
 		}
 	],
 	"headers": [
