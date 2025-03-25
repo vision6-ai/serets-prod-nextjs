@@ -1,3 +1,5 @@
+import { Locale } from '@/config/i18n';
+
 export interface MovieShow {
 	id: number;
 	moviepid: number;
@@ -41,6 +43,8 @@ export interface BookingFormProps {
 	onShowSelection: (value: string) => void;
 	onBooking: () => void;
 	t: (key: string) => string;
+	locale?: Locale;
+	isRtl?: boolean;
 }
 
 export interface MoviePosterProps {

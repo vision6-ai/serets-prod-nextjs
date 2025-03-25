@@ -107,7 +107,10 @@ export function HomeSearch({ locale, onSearch }: HomeSearchProps) {
 	// Handle click outside to close dropdown
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+			if (
+				dropdownRef.current &&
+				!dropdownRef.current.contains(event.target as Node)
+			) {
 				setIsOpen(false);
 			}
 		};
@@ -162,15 +165,18 @@ export function HomeSearch({ locale, onSearch }: HomeSearchProps) {
 	}, []);
 
 	// Function to get the translated city name for display
-	const getTranslatedCity = useCallback((city: string | null) => {
-		if (!city) return t('selectCity');
-		try {
-			return citiesT(city);
-		} catch (error) {
-			// If translation not found, return the original name
-			return city;
-		}
-	}, [t, citiesT]);
+	const getTranslatedCity = useCallback(
+		(city: string | null) => {
+			if (!city) return t('selectCity');
+			try {
+				return citiesT(city);
+			} catch (error) {
+				// If translation not found, return the original name
+				return city;
+			}
+		},
+		[t, citiesT]
+	);
 
 	// Filter cities based on search input
 	useEffect(() => {
@@ -178,19 +184,22 @@ export function HomeSearch({ locale, onSearch }: HomeSearchProps) {
 			setFilteredCities(cities);
 			return;
 		}
-		
-		const filtered = cities.filter(city => 
-			city.toLowerCase().includes(cityFilter.toLowerCase()) ||
-			(getTranslatedCity(city)?.toLowerCase().includes(cityFilter.toLowerCase()))
+
+		const filtered = cities.filter(
+			(city) =>
+				city.toLowerCase().includes(cityFilter.toLowerCase()) ||
+				getTranslatedCity(city)
+					?.toLowerCase()
+					.includes(cityFilter.toLowerCase())
 		);
 		setFilteredCities(filtered);
 	}, [cityFilter, cities, getTranslatedCity]);
-	
+
 	// Create a simple filter handler
 	const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setCityFilter(e.target.value);
 	};
-	
+
 	// Clear filter handler
 	const handleClearFilter = () => {
 		setCityFilter('');
@@ -265,10 +274,10 @@ export function HomeSearch({ locale, onSearch }: HomeSearchProps) {
 					onClick={() => setIsOpen(!isOpen)}
 					className={cn(
 						'flex h-12 w-full items-center justify-between rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-						isRtl ? 'flex-row-reverse text-right' : 'text-left'
-					)}
-				>
-					<div className="flex items-center">
+						isRtl ? 'flex-row text - right' : 'text - left'
+					)}>
+					<div
+						className={cn('flex items-center w-full', isRtl ? 'flex-row' : '')}>
 						<MapPin
 							className={cn(
 								'h-5 w-5 text-muted-foreground',
@@ -277,18 +286,17 @@ export function HomeSearch({ locale, onSearch }: HomeSearchProps) {
 						/>
 						<span>{getTranslatedCity(selectedCity)}</span>
 					</div>
-					<svg 
-						xmlns="http://www.w3.org/2000/svg" 
-						width="24" 
-						height="24" 
-						viewBox="0 0 24 24" 
-						fill="none" 
-						stroke="currentColor" 
-						strokeWidth="2" 
-						strokeLinecap="round" 
-						strokeLinejoin="round" 
-						className="h-4 w-4 opacity-50"
-					>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						className="h-4 w-4 opacity-50">
 						<polyline points="6 9 12 15 18 9"></polyline>
 					</svg>
 				</button>
@@ -300,13 +308,13 @@ export function HomeSearch({ locale, onSearch }: HomeSearchProps) {
 						<div className="sticky top-0 p-2 border-b border-border bg-card">
 							<div className="relative">
 								<Search className="h-4 w-4 absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-								<input 
+								<input
 									ref={citySearchInputRef}
 									className={cn(
-										"w-full h-9 px-9 py-2 bg-background rounded-md border border-input focus:outline-none focus:ring-1 focus:ring-ring",
-										isRtl ? "text-right" : "text-left"
+										'w-full h-9 px-9 py-2 bg-background rounded-md border border-input focus:outline-none focus:ring-1 focus:ring-ring',
+										isRtl ? 'text-right' : 'text-left'
 									)}
-									placeholder={t('filterCities')} 
+									placeholder={t('filterCities')}
 									value={cityFilter}
 									onChange={handleFilterChange}
 								/>
@@ -314,28 +322,25 @@ export function HomeSearch({ locale, onSearch }: HomeSearchProps) {
 									<button
 										type="button"
 										className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground rounded-full p-0.5 focus:outline-none"
-										onClick={handleClearFilter}
-									>
+										onClick={handleClearFilter}>
 										<X size={14} />
 									</button>
 								)}
 							</div>
 						</div>
-						
+
 						{/* Cities List */}
 						<div className="max-h-[300px] overflow-auto">
-							<div 
-								className="city-select-item" 
-								onClick={() => handleCityChange(null)}
-							>
+							<div
+								className="city-select-item"
+								onClick={() => handleCityChange(null)}>
 								{t('allCities')}
 							</div>
 							{filteredCities.map((city) => (
-								<div 
-									key={city} 
+								<div
+									key={city}
 									className="city-select-item"
-									onClick={() => handleCityChange(city)}
-								>
+									onClick={() => handleCityChange(city)}>
 									{getTranslatedCity(city)}
 								</div>
 							))}

@@ -9,6 +9,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { BookingFormProps } from './types';
+import { cn } from '@/lib/utils';
 
 export function BookingForm({
 	selectedCity,
@@ -23,6 +24,8 @@ export function BookingForm({
 	onShowSelection,
 	onBooking,
 	t,
+	locale,
+	isRtl = false,
 }: BookingFormProps) {
 	const citiesT = useTranslations('cities');
 
@@ -48,19 +51,30 @@ export function BookingForm({
 
 			{/* City Selection */}
 			<div className="space-y-2">
-				<label className="block text-sm font-medium mb-1">
+				<label
+					className={cn(
+						'block text-sm font-medium mb-1',
+						isRtl && 'text-right'
+					)}>
 					{t('selectCity')}
 				</label>
 				<Select
 					value={selectedCity || undefined}
 					onValueChange={onCityChange}
 					disabled={availableCities.length === 0 || loading}>
-					<SelectTrigger>
-						<SelectValue placeholder={t('chooseCity')} />
+					<SelectTrigger className={isRtl ? 'text-right' : ''} locale={locale}>
+						<SelectValue
+							placeholder={t('chooseCity')}
+							className={isRtl ? 'text-right' : ''}
+						/>
 					</SelectTrigger>
-					<SelectContent>
+					<SelectContent locale={locale}>
 						{availableCities.map((city) => (
-							<SelectItem key={city} value={city}>
+							<SelectItem
+								key={city}
+								value={city}
+								className={isRtl ? 'text-right' : ''}
+								locale={locale}>
 								{getTranslatedCity(city)}
 							</SelectItem>
 						))}
@@ -72,7 +86,11 @@ export function BookingForm({
 				<>
 					{/* Date Selection */}
 					<div className="space-y-2">
-						<label className="block text-sm font-medium mb-1">
+						<label
+							className={cn(
+								'block text-sm font-medium mb-1',
+								isRtl && 'text-right'
+							)}>
 							{t('selectDate')}
 						</label>
 						<Select
@@ -81,10 +99,15 @@ export function BookingForm({
 							}
 							onValueChange={onDateChange}
 							disabled={Object.keys(processedShows).length === 0 || loading}>
-							<SelectTrigger>
-								<SelectValue placeholder={t('chooseDate')} />
+							<SelectTrigger
+								className={isRtl ? 'text-right' : ''}
+								locale={locale}>
+								<SelectValue
+									placeholder={t('chooseDate')}
+									className={isRtl ? 'text-right' : ''}
+								/>
 							</SelectTrigger>
-							<SelectContent>
+							<SelectContent locale={locale}>
 								{Object.keys(processedShows)
 									.sort()
 									.map((dateStr) => {
@@ -93,7 +116,11 @@ export function BookingForm({
 										const day = dateStr.substring(6, 8);
 										const date = new Date(`${year}-${month}-${day}`);
 										return (
-											<SelectItem key={dateStr} value={dateStr}>
+											<SelectItem
+												key={dateStr}
+												value={dateStr}
+												className={isRtl ? 'text-right' : ''}
+												locale={locale}>
 												{format(date, 'EEEE, MMMM d')}
 											</SelectItem>
 										);
@@ -104,35 +131,56 @@ export function BookingForm({
 
 					{/* Show Selection */}
 					<div className="space-y-2">
-						<label className="block text-sm font-medium mb-1">
+						<label
+							className={cn(
+								'block text-sm font-medium mb-1',
+								isRtl && 'text-right'
+							)}>
 							{t('selectTime')}
 						</label>
 						<Select
 							value={selectedShow?.showtime_pid.toString()}
 							onValueChange={onShowSelection}
 							disabled={!selectedDate || loading}>
-							<SelectTrigger className="w-full h-[80px]">
+							<SelectTrigger
+								className={cn('w-full h-[80px]', isRtl && 'text-right')}
+								locale={locale}>
 								<SelectValue
 									placeholder={t('chooseTime')}
-									className="text-base"
+									className={cn('text-base', isRtl && 'text-right')}
 								/>
 							</SelectTrigger>
-							<SelectContent className="w-[400px] max-h-[400px]">
+							<SelectContent locale={locale}>
 								{selectedDate &&
 									processedShows[format(selectedDate, 'yyyyMMdd')]?.map(
 										(show) => (
 											<SelectItem
 												key={show.showtime_pid}
 												value={show.showtime_pid.toString()}
-												className="py-3 h-[90px]">
-												<div className="flex flex-col gap-2 w-full">
-													<div className="text-sm font-medium text-left line-clamp-2">
-														<span className="text-base font-medium pr-2">
+												className={cn('py-3 h-[90px]', isRtl && 'text-right')}
+												locale={locale}>
+												<div
+													className={cn(
+														'flex flex-col gap-2 w-full',
+														isRtl && 'items-end'
+													)}>
+													<div
+														className={cn(
+															'text-sm font-medium line-clamp-2',
+															isRtl
+																? 'text-right flex flex-row-reverse'
+																: 'text-left'
+														)}>
+														<span className="text-base font-medium px-2">
 															{show.time.substring(0, 5)}
 														</span>
 														{show.movie_name}
 													</div>
-													<div className="flex justify-between items-center gap-4">
+													<div
+														className={cn(
+															'flex justify-between items-center gap-4',
+															isRtl && 'flex-row-reverse'
+														)}>
 														<span className="text-xs text-muted-foreground">
 															{getTranslatedCity(show.city)} - {show.cinema}
 														</span>

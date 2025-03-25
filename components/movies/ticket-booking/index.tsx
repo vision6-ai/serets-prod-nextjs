@@ -17,6 +17,8 @@ import { BookingForm } from './booking-form';
 import { BookingIframe } from './booking-iframe';
 import { useBooking } from './use-booking';
 import { TicketBookingProps } from './types';
+import { useParams } from 'next/navigation';
+import { Locale } from '@/config/i18n';
 
 export function TicketBooking({
 	movieId,
@@ -26,6 +28,8 @@ export function TicketBooking({
 	countitPid,
 }: TicketBookingProps) {
 	const t = useTranslations('booking') as (key: string) => string;
+	const params = useParams();
+	const locale = (params?.locale as Locale) || 'en';
 
 	const {
 		open,
@@ -110,6 +114,8 @@ export function TicketBooking({
 									onShowSelection={handleShowSelection}
 									onBooking={handleBooking}
 									t={t}
+									locale={locale}
+									isRtl={isRtl}
 								/>
 							</div>
 						</>
