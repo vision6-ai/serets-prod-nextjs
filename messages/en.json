@@ -72,7 +72,9 @@
 		"search": {
 			"searchPlaceholder": "Search movie, actor or venue",
 			"selectCity": "Choose City",
-			"allCities": "All Cities"
+			"allCities": "All Cities",
+			"filterCities": "Search cities...",
+			"noCitiesFound": "No cities found"
 		}
 	},
 	"theaters": {
@@ -230,6 +232,8 @@
 		"Tel Aviv": "Tel Aviv",
 		"Zichron Yaakov": "Zichron Yaakov",
 		"Even Yehuda": "Even Yehuda",
-		"Herzliya": "Herzliya"
+		"Herzliya": "Herzliya",
+		"Ramat Hasharon": "Ramat Hasharon",
+		"omer": "Omer"
 	}
 }

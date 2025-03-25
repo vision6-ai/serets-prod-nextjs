@@ -72,7 +72,9 @@
 		"search": {
 			"searchPlaceholder": "חפש סרט, שחקן או מיקום",
 			"selectCity": "בחר עיר",
-			"allCities": "כל הערים"
+			"allCities": "כל הערים",
+			"filterCities": "חפש ערים...",
+			"noCitiesFound": "לא נמצאו ערים"
 		}
 	},
 	"theaters": {
@@ -230,6 +232,8 @@
 		"Tel Aviv": "תל אביב",
 		"Zichron Yaakov": "זכרון יעקב",
 		"Even Yehuda": "אבן יהודה",
-		"Herzliya": "הרצליה"
+		"Herzliya": "הרצליה",
+		"Ramat Hasharon": "רמת השרון",
+		"omer": "עומר"
 	}
 }
