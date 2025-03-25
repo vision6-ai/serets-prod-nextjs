@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import {
+	logError,
+	consoleInfo,
+	consoleError,
+	consoleWarn,
+	saveOperationLog,
+} from '@/app/utils/logger';
 
 // Initialize Supabase admin client with service role key (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -28,16 +35,17 @@ async function fetchShowtimes() {
 			throw new Error('Missing required environment variables for Supabase');
 		}
 
-		console.log('Fetching showtimes from external API', {
+		consoleInfo('Fetching showtimes from external API', {
 			url: SHOWTIMES_API_URL,
 		});
 
 		const response = await fetch(`${SHOWTIMES_API_URL}?key=${API_KEY}`);
-		console.log('External API response status', { status: response.status });
+		consoleInfo('External API response status', { status: response.status });
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			console.error('External API error', errorText, {
+			consoleError('External API error', {
+				errorText,
 				status: response.status,
 			});
 			throw new Error(
@@ -49,7 +57,7 @@ async function fetchShowtimes() {
 
 		// Validate response format
 		if (!responseJson || typeof responseJson !== 'object') {
-			console.error('Invalid API response format', { response: responseJson });
+			consoleError('Invalid API response format', { response: responseJson });
 			throw new Error('API returned invalid response format');
 		}
 
@@ -57,13 +65,13 @@ async function fetchShowtimes() {
 		const data = responseJson.data;
 
 		if (!Array.isArray(data)) {
-			console.error('Invalid data format', {
+			consoleError('Invalid data format', {
 				dataType: typeof data,
 			});
 			throw new Error(`API data is not an array: ${typeof data}`);
 		}
 
-		console.log('Successfully fetched showtimes', {
+		consoleInfo('Successfully fetched showtimes', {
 			itemCount: data.length,
 		});
 
@@ -74,7 +82,7 @@ async function fetchShowtimes() {
 				(field) => !data[0].hasOwnProperty(field)
 			);
 			if (missingFields.length > 0) {
-				console.error('Missing required fields', { missingFields });
+				consoleError('Missing required fields', { missingFields });
 				throw new Error(
 					`API response missing required fields: ${missingFields.join(', ')}`
 				);
@@ -83,7 +91,10 @@ async function fetchShowtimes() {
 
 		return data;
 	} catch (error) {
-		console.error('Error in fetchShowtimes', error);
+		consoleError('Error in fetchShowtimes', {
+			errorMessage: error instanceof Error ? error.message : 'Unknown error',
+			errorStack: error instanceof Error ? error.stack : undefined,
+		});
 		throw error;
 	}
 }
@@ -99,7 +110,7 @@ export async function POST(request: NextRequest) {
 
 // Common handler for both GET and POST
 async function handleRequest(request: NextRequest) {
-	console.log('Starting background sync operation', {
+	consoleInfo('Starting background sync operation', {
 		url: request.url,
 		method: request.method,
 		timestamp: new Date().toISOString(),
@@ -110,7 +121,7 @@ async function handleRequest(request: NextRequest) {
 		const traceId = `sync-${Date.now()}-${Math.random()
 			.toString(36)
 			.substring(2, 9)}`;
-		console.log('Generated trace ID for background operation', { traceId });
+		consoleInfo('Generated trace ID for background operation', { traceId });
 
 		// Return immediate response while processing continues in background
 		const responseStream = new TransformStream();
@@ -132,7 +143,9 @@ async function handleRequest(request: NextRequest) {
 
 		// Continue processing in background
 		processSyncInBackground(traceId).catch((error) => {
-			console.error('Unhandled error in background processing', error, {
+			consoleError('Unhandled error in background processing', {
+				errorMessage: error instanceof Error ? error.message : 'Unknown error',
+				errorStack: error instanceof Error ? error.stack : undefined,
 				traceId,
 				timestamp: new Date().toISOString(),
 			});
@@ -145,7 +158,9 @@ async function handleRequest(request: NextRequest) {
 			},
 		});
 	} catch (error) {
-		console.error('Unhandled error in background sync', error, {
+		consoleError('Unhandled error in background sync', {
+			errorMessage: error instanceof Error ? error.message : 'Unknown error',
+			errorStack: error instanceof Error ? error.stack : undefined,
 			timestamp: new Date().toISOString(),
 		});
 		return NextResponse.json(
@@ -160,15 +175,18 @@ async function handleRequest(request: NextRequest) {
 
 // Function to process sync in background
 async function processSyncInBackground(traceId: string) {
-	console.log('Background processing started', {
+	consoleInfo('Background processing started', {
 		traceId,
 		timestamp: new Date().toISOString(),
 	});
 
 	try {
+		// Variables to track timing
+		let totalProcessingTime = 0;
+
 		// Step 1: Fetch data from external API
 		const startTimeFetch = performance.now();
-		console.log('Starting external API fetch', {
+		consoleInfo('Starting external API fetch', {
 			traceId,
 			timestamp: new Date().toISOString(),
 		});
@@ -176,7 +194,7 @@ async function processSyncInBackground(traceId: string) {
 		const showtimesData = await fetchShowtimes();
 		const fetchTime = performance.now() - startTimeFetch;
 
-		console.log('External API fetch completed', {
+		consoleInfo('External API fetch completed', {
 			executionTimeMs: fetchTime,
 			recordCount: showtimesData?.length || 0,
 			traceId,
@@ -184,7 +202,7 @@ async function processSyncInBackground(traceId: string) {
 		});
 
 		if (!showtimesData || !Array.isArray(showtimesData)) {
-			console.error('Invalid API response structure', {
+			consoleError('Invalid API response structure', {
 				dataType: typeof showtimesData,
 				isArray: Array.isArray(showtimesData),
 				traceId,
@@ -193,152 +211,286 @@ async function processSyncInBackground(traceId: string) {
 			return;
 		}
 
-		// Step 2: Process and save data
-		const results = {
-			success: 0,
-			existing: 0,
-			failed: 0,
-			errors: [] as string[],
-		};
-
-		console.log('Beginning batch processing', {
-			totalRecords: showtimesData.length,
+		// Step 2: Fetch all existing records from database
+		consoleInfo('Fetching existing records from database', {
 			traceId,
 			timestamp: new Date().toISOString(),
 		});
 
-		const startTimeProcess = performance.now();
-		const totalItems = showtimesData.length;
-		const progressInterval = Math.max(Math.floor(totalItems / 10), 1); // Log progress after each ~10%
+		// Get both movieshows and movies for proper validation
+		const { data: existingMovieshows, error: fetchError } = await supabaseAdmin
+			.from('movieshows')
+			.select('showtime_pid, moviepid')
+			.order('moviepid');
 
-		for (let i = 0; i < showtimesData.length; i++) {
-			const showtime = showtimesData[i];
-			// Log progress every ~10% of items
-			if (i % progressInterval === 0 || i === showtimesData.length - 1) {
-				console.log('Sync progress', {
-					processed: i + 1,
-					total: totalItems,
-					percentComplete: Math.round(((i + 1) / totalItems) * 100),
-					traceId,
-					timestamp: new Date().toISOString(),
-				});
-			}
-
-			try {
-				console.log('Processing individual showtime', {
-					showtime_pid: showtime.SHOWTIME_PID,
-					movie_name: showtime.MOVIE_Name,
-					day: showtime.DAY,
-					cinema: showtime.CINEMA,
-					index: i,
-					traceId,
-					timestamp: new Date().toISOString(),
-				});
-
-				const { data: existingMovieshow, error: checkError } =
-					await supabaseAdmin
-						.from('movieshows')
-						.select('id')
-						.eq('showtime_pid', showtime.SHOWTIME_PID)
-						.single();
-
-				if (checkError && checkError.code !== 'PGRST116') {
-					console.error('Existence check failed', {
-						errorMessage: checkError.message,
-						errorCode: checkError.code,
-						showtime_pid: showtime.SHOWTIME_PID,
-						traceId,
-						timestamp: new Date().toISOString(),
-					});
-					results.failed++;
-					results.errors.push(
-						`Error checking ${showtime.SHOWTIME_PID}: ${checkError.message}`
-					);
-					continue;
-				}
-
-				if (existingMovieshow) {
-					console.log('Skipping existing showtime', {
-						showtime_pid: showtime.SHOWTIME_PID,
-						traceId,
-						timestamp: new Date().toISOString(),
-					});
-					results.existing++;
-					continue;
-				}
-
-				const { error: insertError } = await supabaseAdmin
-					.from('movieshows')
-					.insert({
-						moviepid: showtime.MoviePID,
-						showtime_pid: showtime.SHOWTIME_PID,
-						movie_name: showtime.MOVIE_Name,
-						movie_english: showtime.MOVIE_English,
-						banner: showtime.BANNER,
-						genres: showtime.GENRES,
-						day: new Date(showtime.DAY).toISOString(),
-						time: showtime.TIME,
-						cinema: showtime.CINEMA,
-						city: showtime.CITY,
-						chain: showtime.CHAIN,
-						available_seats: showtime.AvailableSEATS,
-						deep_link: showtime.DeepLink,
-						imdbid: showtime.IMDBID,
-					});
-
-				if (insertError) {
-					console.error('Insert operation failed', {
-						errorMessage: insertError.message,
-						errorCode: insertError.code,
-						errorDetails: insertError.details,
-						showtime_pid: showtime.SHOWTIME_PID,
-						traceId,
-						timestamp: new Date().toISOString(),
-					});
-					results.failed++;
-					results.errors.push(
-						`Error inserting ${showtime.SHOWTIME_PID}: ${insertError.message}`
-					);
-					continue;
-				}
-
-				console.log('Successfully inserted showtime', {
-					showtime_pid: showtime.SHOWTIME_PID,
-					movie_name: showtime.MOVIE_Name,
-					traceId,
-					timestamp: new Date().toISOString(),
-				});
-				results.success++;
-			} catch (error) {
-				console.error('Showtime processing error', {
-					errorMessage:
-						error instanceof Error ? error.message : 'Unknown error',
-					showtime_pid: showtime.SHOWTIME_PID,
-					errorStack: error instanceof Error ? error.stack : undefined,
-					traceId,
-					timestamp: new Date().toISOString(),
-				});
-				results.failed++;
-				results.errors.push(
-					`Error processing showtime: ${
-						error instanceof Error ? error.message : 'Unknown error'
-					}`
-				);
-			}
+		if (fetchError) {
+			consoleError('Error fetching existing records', {
+				errorMessage: fetchError.message,
+				errorCode: fetchError.code,
+				traceId,
+				timestamp: new Date().toISOString(),
+			});
+			throw fetchError;
 		}
 
-		const processingTime = performance.now() - startTimeProcess;
-		console.log('Batch processing completed successfully', {
-			executionTimeMs: processingTime,
-			results,
-			averageTimePerRecord: processingTime / showtimesData.length,
+		// Fetch existing movies to check foreign key constraints
+		const { data: existingMovies, error: moviesError } = await supabaseAdmin
+			.from('movies')
+			.select('countit_pid')
+			.order('countit_pid');
+
+		if (moviesError) {
+			consoleError('Error fetching movies', {
+				errorMessage: moviesError.message,
+				errorCode: moviesError.code,
+				traceId,
+				timestamp: new Date().toISOString(),
+			});
+			throw moviesError;
+		}
+
+		consoleInfo('Fetched records', {
+			movieshowsCount: existingMovieshows?.length || 0,
+			moviesCount: existingMovies?.length || 0,
 			traceId,
 			timestamp: new Date().toISOString(),
 		});
+
+		// Create maps for quick lookups
+		const existingMap = new Map();
+		existingMovieshows?.forEach((show) => {
+			existingMap.set(show.showtime_pid, show.moviepid);
+		});
+
+		consoleInfo('Setup existing map with entries', {
+			mapSize: existingMap.size,
+			sampleKeys:
+				existingMovieshows?.slice(0, 3).map((s) => s.showtime_pid) || [],
+		});
+
+		// Create a set of valid movie PIDs
+		const validMoviePIDs = new Set();
+		existingMovies?.forEach((movie) => {
+			validMoviePIDs.add(movie.countit_pid);
+		});
+
+		// Step 3: Prepare records for insertion and updating
+		const recordsToInsert = [];
+		const skippedRecords = [];
+		const existingRecords = [];
+
+		// Use a Set to ensure no duplicates by showtime_pid
+		const processedShowtimePIDs = new Set();
+
+		// Process and categorize records
+		for (const showtime of showtimesData) {
+			// CRITICAL CHECK: Skip if showtime_pid already exists in database
+			// This is the most important check to prevent duplicates
+			if (
+				existingMap.has(parseInt(showtime.SHOWTIME_PID)) ||
+				existingMap.has(showtime.SHOWTIME_PID)
+			) {
+				existingRecords.push({
+					showtime_pid: showtime.SHOWTIME_PID,
+					moviepid: showtime.MoviePID,
+					movie_name: showtime.MOVIE_Name || '',
+				});
+				continue;
+			}
+
+			// Secondary check: Skip if we've already processed this showtime_pid in this batch
+			if (processedShowtimePIDs.has(showtime.SHOWTIME_PID)) {
+				continue;
+			}
+
+			// Mark this showtime_pid as processed for this batch
+			processedShowtimePIDs.add(showtime.SHOWTIME_PID);
+
+			// Skip records with invalid moviepid (foreign key constraint)
+			if (!showtime.MoviePID || !validMoviePIDs.has(showtime.MoviePID)) {
+				skippedRecords.push({
+					showtime_pid: showtime.SHOWTIME_PID,
+					moviepid: showtime.MoviePID,
+					movie_name: showtime.MOVIE_Name || '',
+					reason: !showtime.MoviePID
+						? 'Missing MoviePID'
+						: 'MoviePID not found in movies table',
+				});
+				continue;
+			}
+
+			// Ensure genres is not null
+			const genres = showtime.GENRES || '';
+
+			// Add to records to insert
+			recordsToInsert.push({
+				moviepid: showtime.MoviePID,
+				showtime_pid: showtime.SHOWTIME_PID,
+				movie_name: showtime.MOVIE_Name || '',
+				movie_english: showtime.MOVIE_English || '',
+				banner: showtime.BANNER || '',
+				genres: genres,
+				day: new Date(showtime.DAY).toISOString(),
+				time: showtime.TIME || '00:00:00',
+				cinema: showtime.CINEMA || '',
+				city: showtime.CITY || '',
+				chain: showtime.CHAIN || '',
+				available_seats: showtime.AvailableSEATS || 0,
+				deep_link: showtime.DeepLink || '',
+				imdbid: showtime.IMDBID || '',
+				created_at: new Date().toISOString(),
+			});
+		}
+
+		// After categorizing records
+		consoleInfo('Records categorized', {
+			toInsert: recordsToInsert.length,
+			existing: existingRecords.length,
+			skipped: skippedRecords.length,
+			traceId,
+		});
+
+		// Step 4: Batch insert new records
+		const results = {
+			success: 0,
+			existing: existingRecords.length,
+			failed: 0,
+			errors: [] as string[],
+			successList: [] as {
+				moviepid: number;
+				movie_name: string;
+				showtime_pid: number;
+			}[],
+			failedList: [] as {
+				moviepid: number;
+				movie_name: string;
+				showtime_pid: number;
+				error: string;
+			}[],
+		};
+
+		if (recordsToInsert.length === 0) {
+			consoleInfo('No new records to insert', { traceId });
+		} else {
+			consoleInfo(`Inserting ${recordsToInsert.length} new records`, {
+				traceId,
+			});
+
+			const startTimeProcess = performance.now();
+
+			// Insert records in batches of 100
+			const BATCH_SIZE = 100;
+			for (let i = 0; i < recordsToInsert.length; i += BATCH_SIZE) {
+				const batch = recordsToInsert.slice(i, i + BATCH_SIZE);
+
+				if (batch.length === 0) continue;
+
+				// Minimal progress logging
+				if (recordsToInsert.length > BATCH_SIZE) {
+					consoleInfo(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}`, {
+						progress: `${i + 1}-${Math.min(
+							i + batch.length,
+							recordsToInsert.length
+						)} of ${recordsToInsert.length}`,
+						traceId,
+					});
+				}
+
+				// Use regular insert since there's no unique constraint on showtime_pid
+				const { error: insertError } = await supabaseAdmin
+					.from('movieshows')
+					.insert(batch);
+
+				if (insertError) {
+					results.failed += batch.length;
+					results.errors.push(`Error inserting batch: ${insertError.message}`);
+
+					// Add failed movies to the failedList
+					batch.forEach((movie) => {
+						results.failedList.push({
+							moviepid: movie.moviepid,
+							movie_name: movie.movie_name,
+							showtime_pid: movie.showtime_pid,
+							error: insertError.message,
+						});
+					});
+				} else {
+					results.success += batch.length;
+
+					// Add successful movies to the successList
+					batch.forEach((movie) => {
+						results.successList.push({
+							moviepid: movie.moviepid,
+							movie_name: movie.movie_name,
+							showtime_pid: movie.showtime_pid,
+						});
+					});
+				}
+			}
+
+			const processingTime = performance.now() - startTimeProcess;
+			totalProcessingTime = processingTime; // Store in the outer variable
+
+			// After processing
+			consoleInfo(`Processing completed`, {
+				executionTimeMs: Math.round(processingTime),
+				traceId,
+			});
+		}
+
+		// Comprehensive final summary
+		const summaryData = {
+			// Main metrics
+			totalProcessed: showtimesData.length,
+			newlyInserted: results.success,
+			alreadyExisting: results.existing,
+			failedToInsert: results.failed,
+			skippedDueToValidation: skippedRecords.length,
+
+			// Processing details
+			processingTime: Math.round(totalProcessingTime),
+			fetchTime: Math.round(fetchTime),
+
+			// Lists
+			newMovies: results.successList.map((m) => ({
+				name: m.movie_name,
+				pid: m.moviepid,
+				showtime_pid: m.showtime_pid,
+			})),
+
+			failedMovies: results.failedList.map((m) => ({
+				name: m.movie_name,
+				pid: m.moviepid,
+				showtime_pid: m.showtime_pid,
+				error: m.error,
+			})),
+
+			// Summary counts
+			errorCount: results.errors.length,
+			validMoviesCount: validMoviePIDs.size,
+			existingShowsCount: existingMap.size,
+
+			// Trace info
+			traceId,
+			timestamp: new Date().toISOString(),
+		};
+
+		// Final console summary
+		consoleInfo('SYNC OPERATION SUMMARY', summaryData);
+
+		// Save entire operation result to the database as a single log entry
+		await saveOperationLog('movieshows_sync', summaryData);
 	} catch (error) {
-		console.error('Error in background processing', error, {
+		const errorData = {
+			errorMessage: error instanceof Error ? error.message : 'Unknown error',
+			errorStack: error instanceof Error ? error.stack : undefined,
 			traceId,
 			timestamp: new Date().toISOString(),
-		});
+		};
+
+		consoleError('Error in background processing', errorData);
+
+		// Still log errors to the database
+		await logError('Error in background processing', errorData);
 	}
 }
