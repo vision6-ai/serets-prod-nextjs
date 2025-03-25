@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { BookingFormProps } from './types';
 import { cn } from '@/lib/utils';
+import { he, enUS } from 'date-fns/locale';
 
 export function BookingForm({
 	selectedCity,
@@ -28,7 +29,7 @@ export function BookingForm({
 	isRtl = false,
 }: BookingFormProps) {
 	const citiesT = useTranslations('cities');
-
+	const isHebrew = locale === 'he';
 	// Function to get the translated city name
 	const getTranslatedCity = (city: string) => {
 		try {
@@ -115,13 +116,16 @@ export function BookingForm({
 										const month = dateStr.substring(4, 6);
 										const day = dateStr.substring(6, 8);
 										const date = new Date(`${year}-${month}-${day}`);
+
 										return (
 											<SelectItem
 												key={dateStr}
 												value={dateStr}
 												className={isRtl ? 'text-right' : ''}
 												locale={locale}>
-												{format(date, 'EEEE, MMMM d')}
+												{format(date, 'EEEE, MMMM d', {
+													locale: isHebrew ? he : enUS,
+												})}
 											</SelectItem>
 										);
 									})}

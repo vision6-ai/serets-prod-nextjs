@@ -18,7 +18,6 @@ const SelectValue = SelectPrimitive.Value;
 // Create a function to check if a locale is RTL
 const isRtlLocale = (locale?: Locale): boolean => {
 	const rtl = locale === 'he';
-	console.log('isRtl:', rtl, 'locale:', locale);
 	return rtl;
 };
 
