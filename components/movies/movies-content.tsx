@@ -161,76 +161,207 @@ export function MoviesContent({
 						if (currentMoviesInTheaters && currentMoviesInTheaters.length > 0) {
 							// Get movie details for each movie in theaters
 							const theaterMoviesWithDetails = await Promise.all(
-								currentMoviesInTheaters.map(async (theaterMovie: TheaterMovie) => {
-									// Get the movie from the movies table using the id from the theater movie
-									const { data: movieData } = await supabase
-										.from('movies')
-										.select('*')
-										.eq('id', theaterMovie.id)
-										.single();
-
-									// If movie data not found, try looking up by countit_pid
-									let finalMovieData = movieData;
-									if (!finalMovieData && theaterMovie.moviepid) {
-										const { data: movieByPid } = await supabase
+								currentMoviesInTheaters.map(
+									async (theaterMovie: TheaterMovie) => {
+										// Get the movie from the movies table using the id from the theater movie
+										const { data: movieData } = await supabase
 											.from('movies')
 											.select('*')
-											.eq('countit_pid', theaterMovie.moviepid.toString())
+											.eq('id', theaterMovie.id)
 											.single();
-										
-										finalMovieData = movieByPid;
-									}
 
-									if (!finalMovieData) return null;
+										// If movie data not found, try looking up by countit_pid
+										let finalMovieData = movieData;
+										if (!finalMovieData && theaterMovie.moviepid) {
+											const { data: movieByPid } = await supabase
+												.from('movies')
+												.select('*')
+												.eq('countit_pid', theaterMovie.moviepid.toString())
+												.single();
 
-									// Get translations for this movie
-									const { data: translations } = await supabase
-										.from('movie_translations')
-										.select('title, synopsis, poster_url, trailer_url, language_code, movie_id')
-										.eq('movie_id', finalMovieData.id)
-										.eq('language_code', locale)
-										.single();
+											finalMovieData = movieByPid;
+										}
 
-									// If no translation in requested locale, try to get English translation
-									if (!translations) {
-										const { data: enTranslations } = await supabase
+										if (!finalMovieData) return null;
+
+										// Get translations for this movie
+										const { data: translations } = await supabase
 											.from('movie_translations')
-											.select('title, synopsis, poster_url, trailer_url, language_code, movie_id')
+											.select(
+												'title, synopsis, poster_url, trailer_url, language_code, movie_id'
+											)
 											.eq('movie_id', finalMovieData.id)
-											.eq('language_code', 'en')
+											.eq('language_code', locale)
 											.single();
 
+										// If no translation in requested locale, try to get English translation
+										if (!translations) {
+											const { data: enTranslations } = await supabase
+												.from('movie_translations')
+												.select(
+													'title, synopsis, poster_url, trailer_url, language_code, movie_id'
+												)
+												.eq('movie_id', finalMovieData.id)
+												.eq('language_code', 'en')
+												.single();
+
+											return {
+												...finalMovieData,
+												title:
+													enTranslations?.title ||
+													finalMovieData.title ||
+													theaterMovie.original_title,
+												hebrew_title:
+													locale === 'he'
+														? enTranslations?.title
+														: finalMovieData.hebrew_title,
+												synopsis:
+													enTranslations?.synopsis || finalMovieData.synopsis,
+												poster_url: enTranslations?.poster_url || null,
+												screenings_count: theaterMovie.screenings_count,
+											};
+										}
+
+										// Return movie with translations
 										return {
 											...finalMovieData,
-											title: enTranslations?.title || finalMovieData.title || theaterMovie.original_title,
-											hebrew_title: locale === 'he' ? enTranslations?.title : finalMovieData.hebrew_title,
-											synopsis: enTranslations?.synopsis || finalMovieData.synopsis,
-											poster_url: enTranslations?.poster_url || null,
-											screenings_count: theaterMovie.screenings_count
+											title:
+												translations.title ||
+												finalMovieData.title ||
+												theaterMovie.original_title,
+											hebrew_title:
+												locale === 'he'
+													? translations.title
+													: finalMovieData.hebrew_title,
+											synopsis:
+												translations.synopsis || finalMovieData.synopsis,
+											poster_url: translations.poster_url || null,
+											screenings_count: theaterMovie.screenings_count,
 										};
 									}
-
-									// Return movie with translations
-									return {
-										...finalMovieData,
-										title: translations.title || finalMovieData.title || theaterMovie.original_title,
-										hebrew_title: locale === 'he' ? translations.title : finalMovieData.hebrew_title,
-										synopsis: translations.synopsis || finalMovieData.synopsis,
-										poster_url: translations.poster_url || null,
-										screenings_count: theaterMovie.screenings_count
-									};
-								})
+								)
 							);
 
-							// Filter out any nulls and set the movies
-							const validMovies = theaterMoviesWithDetails.filter(movie => movie !== null);
-							
+							// Filter out any nulls
+							const validMovies = theaterMoviesWithDetails.filter(
+								(movie) => movie !== null
+							);
+
+							// Remove duplicates based on countit_pid using a Map
+							const moviesMap = new Map();
+							validMovies.forEach((movie) => {
+								if (movie.countit_pid) {
+									moviesMap.set(movie.countit_pid, movie);
+								} else {
+									// If no countit_pid, use the id as fallback
+									moviesMap.set(movie.id, movie);
+								}
+							});
+							const uniqueMovies = Array.from(moviesMap.values());
+
 							// Sort movies by screenings_count in descending order
-							const sortedMovies = validMovies.sort((a, b) => 
-								(b.screenings_count || 0) - (a.screenings_count || 0)
+							const sortedMovies = uniqueMovies.sort(
+								(a, b) => (b.screenings_count || 0) - (a.screenings_count || 0)
 							);
-							
-							setMovies(sortedMovies);
+
+							console.log(
+								'Theater movies count before filtering:',
+								sortedMovies.length
+							);
+							let filteredMovies = sortedMovies;
+
+							// Apply search query if provided and not empty
+							if (query && query.trim() !== '') {
+								filteredMovies = filteredMovies.filter(
+									(movie) =>
+										movie.title.toLowerCase().includes(query.toLowerCase()) ||
+										(movie.hebrew_title &&
+											movie.hebrew_title
+												.toLowerCase()
+												.includes(query.toLowerCase())) ||
+										(movie.synopsis &&
+											movie.synopsis
+												.toLowerCase()
+												.includes(query.toLowerCase()))
+								);
+								console.log('After search filter:', filteredMovies.length);
+							}
+
+							// Apply city filter if provided
+							if (city) {
+								// Get movie IDs that have showtimes in the selected city
+								const { data: cityMovies, error: cityError } = await supabase
+									.from('movieshows')
+									.select('moviepid')
+									.eq('city', city)
+									.order('moviepid');
+
+								if (cityError) {
+									console.error('Error filtering by city:', cityError);
+								}
+
+								if (cityMovies && cityMovies.length > 0) {
+									// Get unique movie IDs
+									const moviePids = [
+										...new Set(cityMovies.map((item) => item.moviepid)),
+									];
+
+									if (moviePids.length > 0) {
+										// Filter the sorted movies to only include those with matching PIDs
+										filteredMovies = filteredMovies.filter((movie) =>
+											moviePids.some((pid) => movie.countit_pid === String(pid))
+										);
+										console.log('After city filter:', filteredMovies.length);
+									} else {
+										filteredMovies = [];
+									}
+								} else {
+									filteredMovies = [];
+								}
+							}
+
+							// Apply genre filter if provided
+							if (filters.genres.length > 0) {
+								// Get movie IDs for the selected genres
+								const { data: genreMovieIds } = await supabase
+									.from('movie_genres')
+									.select('movie_id')
+									.in('genre_id', filters.genres);
+
+								if (genreMovieIds && genreMovieIds.length > 0) {
+									const movieIds = genreMovieIds.map((item) => item.movie_id);
+									filteredMovies = filteredMovies.filter((movie) =>
+										movieIds.includes(movie.id)
+									);
+									console.log('After genre filter:', filteredMovies.length);
+								} else {
+									filteredMovies = [];
+								}
+							}
+
+							// Apply year filter if provided
+							if (filters.year) {
+								filteredMovies = filteredMovies.filter((movie) => {
+									if (!movie.release_date) return false;
+									const releaseYear = new Date(
+										movie.release_date
+									).getFullYear();
+									return releaseYear === filters.year;
+								});
+								console.log('After year filter:', filteredMovies.length);
+							}
+
+							// Apply rating filter if provided
+							if (filters.rating !== null && filters.rating !== undefined) {
+								filteredMovies = filteredMovies.filter(
+									(movie) =>
+										movie.rating !== null && movie.rating >= filters.rating!
+								);
+								console.log('After rating filter:', filteredMovies.length);
+							}
+
+							console.log('Final movies count:', filteredMovies.length);
+							setMovies(filteredMovies);
 							setLoading(false);
 							return;
 						}
@@ -253,8 +384,9 @@ export function MoviesContent({
 					if (translationMatches && translationMatches.length > 0) {
 						const movieIds = translationMatches.map((match) => match.movie_id);
 						movieQuery = movieQuery.in('id', movieIds);
-					} else {
-						// If no matches in translations, return empty result
+					} else if (query.trim() !== '') {
+						// Only return empty results if there was a non-empty search with no matches
+						// If search is empty, continue with other filters
 						setMovies([]);
 						setLoading(false);
 						return;
@@ -321,7 +453,7 @@ export function MoviesContent({
 						.lte('release_date', `${filters.year}-12-31`);
 				}
 
-				if (filters.rating) {
+				if (filters.rating !== null && filters.rating !== undefined) {
 					movieQuery = movieQuery.gte('rating', filters.rating);
 				}
 
