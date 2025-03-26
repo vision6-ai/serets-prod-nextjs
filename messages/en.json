@@ -272,5 +272,51 @@
 		"Herzliya": "Herzliya",
 		"Ramat Hasharon": "Ramat Hasharon",
 		"omer": "Omer"
+	},
+	"about": {
+		"title": "About Us",
+		"subtitle": "Connecting you to the magic of the big screen",
+		"mission": {
+			"title": "Our Mission",
+			"subtitle": "To enhance the movie experience for every cinema lover in Israel"
+		},
+		"intro": "We believe the movie experience begins long before the lights go down in the theater. It starts the moment you wonder what to watch, get excited by a trailer, explore your favorite actors, and choose the perfect film for the night.",
+		"story": "Our platform was created to solve a real need: a smart, modern space that brings together all movies currently showing in cinemas across Israel – from every theater chain, in every city, with full ticketing capabilities in one seamless, personalized experience.",
+		"features": {
+			"title": "On our site, you can:",
+			"discover": {
+				"title": "Discover Movies",
+				"description": "Find the latest movies now playing, with filters for genre, rating, cast, location, and more."
+			},
+			"trailers": {
+				"title": "Watch Trailers",
+				"description": "Watch high-quality trailers right from the movie page."
+			},
+			"actors": {
+				"title": "Explore Actors",
+				"description": "Read in-depth actor bios, filmographies, photos, and details – all available in both Hebrew and English."
+			},
+			"tickets": {
+				"title": "Purchase Tickets",
+				"description": "Choose your preferred cinema and purchase tickets directly, without jumping between websites."
+			},
+			"discounts": {
+				"title": "Use Discounts",
+				"description": "Redeem all types of coupons, discounts, and loyalty program offers with ease."
+			},
+			"responsive": {
+				"title": "Multi-device Experience",
+				"description": "Enjoy a smooth experience on any device – mobile, tablet, or desktop – thanks to a fully responsive, user-first design."
+			}
+		},
+		"partnerships": {
+			"title": "Our Partnerships",
+			"description": "We collaborate with cinema chains, film distributors, and ticketing providers to ensure that our data is always up to date, accurate, and comprehensive."
+		},
+		"vision": {
+			"title": "Our Vision",
+			"description": "Our vision is to become Israel's leading cinema discovery and ticketing platform – not just a place to buy tickets, but a cultural space that connects people to the magic of the big screen."
+		},
+		"conclusion": "Join us on a new kind of cinematic journey – where every movie begins with a truly great experience: yours."
 	}
 }
