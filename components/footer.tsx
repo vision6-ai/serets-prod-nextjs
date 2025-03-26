@@ -170,9 +170,6 @@ export default function Footer({ locale = 'en' }: { locale?: string }) {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-center md:text-left">
               <p className="text-sm text-muted-foreground">
-                {t('builtBy')}
-              </p>
-              <p className="text-sm text-muted-foreground">
                 {t('allRightsReserved', { year: new Date().getFullYear() })}
               </p>
             </div>
@@ -194,7 +191,7 @@ export default function Footer({ locale = 'en' }: { locale?: string }) {
                 {t('socialMedia.facebook')}
               </Link>
               <Link 
-                href="https://instagram.com/serets.il" 
+                href="https://www.instagram.com/movietime_il?igsh=M3I2a2JpZnNvamcz" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
