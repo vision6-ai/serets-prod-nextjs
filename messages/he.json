@@ -178,6 +178,14 @@
 		"recommendedMovies": "סרטים מומלצים",
 		"cast": "שחקנים"
 	},
+	"actors": {
+		"biography": "ביוגרפיה",
+		"personalInfo": "מידע אישי",
+		"born": "תאריך לידה",
+		"placeOfBirth": "מקום לידה",
+		"knownFor": "ידוע בזכות",
+		"filmography": "פילמוגרפיה"
+	},
 	"genres": {
 		"notFound": "ז'אנר לא נמצא",
 		"notFoundDesc": "לא הצלחנו למצוא את הז'אנר שביקשת.",

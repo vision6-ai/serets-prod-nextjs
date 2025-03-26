@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { Link } from '@/app/i18n'
 import { Locale } from '@/config/i18n'
+import { useTranslations } from 'next-intl'
 
 interface Actor {
   id: string
@@ -34,6 +35,9 @@ interface ActorContentProps {
 }
 
 export function ActorContent({ actor, movies, locale }: ActorContentProps) {
+  const t = useTranslations('actors');
+  const isRtl = locale === 'he';
+  
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-4xl mx-auto">
@@ -57,7 +61,7 @@ export function ActorContent({ actor, movies, locale }: ActorContentProps) {
           <div className="flex-1">
             {actor.bio && (
               <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-4">Biography</h3>
+                <h3 className="text-2xl font-semibold mb-4">{t('biography')}</h3>
                 <p className="text-lg leading-relaxed">{actor.bio}</p>
               </div>
             )}
@@ -65,24 +69,24 @@ export function ActorContent({ actor, movies, locale }: ActorContentProps) {
           
           <div className="md:w-1/3">
             <div className="bg-card rounded-lg p-6 shadow-sm">
-              <h3 className="text-xl font-semibold mb-4">Personal Info</h3>
+              <h3 className="text-xl font-semibold mb-4">{t('personalInfo')}</h3>
               
               {actor.birth_date && (
                 <div className="mb-4">
-                  <h4 className="text-sm font-medium text-muted-foreground">Born</h4>
-                  <p>{new Date(actor.birth_date).toLocaleDateString()}</p>
+                  <h4 className="text-sm font-medium text-muted-foreground">{t('born')}</h4>
+                  <p>{new Date(actor.birth_date).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US')}</p>
                 </div>
               )}
               
               {actor.birth_place && (
                 <div className="mb-4">
-                  <h4 className="text-sm font-medium text-muted-foreground">Place of Birth</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">{t('placeOfBirth')}</h4>
                   <p>{actor.birth_place}</p>
                 </div>
               )}
               
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-muted-foreground">Known For</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">{t('knownFor')}</h4>
                 <p>Acting</p>
               </div>
             </div>
@@ -91,7 +95,7 @@ export function ActorContent({ actor, movies, locale }: ActorContentProps) {
 
         {movies.length > 0 && (
           <div>
-            <h3 className="text-2xl font-semibold mb-6">Filmography</h3>
+            <h3 className="text-2xl font-semibold mb-6">{t('filmography')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {movies.map((movie) => (
                 <div key={movie.id} className="group">
@@ -114,7 +118,7 @@ export function ActorContent({ actor, movies, locale }: ActorContentProps) {
                       )}
                     </div>
                     <h4 className="font-medium group-hover:text-primary transition-colors">
-                      {movie.title}
+                      {isRtl && movie.hebrew_title ? movie.hebrew_title : movie.title}
                     </h4>
                     <p className="text-sm text-muted-foreground">
                       {movie.role}
