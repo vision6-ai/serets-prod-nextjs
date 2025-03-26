@@ -1,9 +1,12 @@
 'use client'
 
-import { PropsWithChildren } from 'react'
+import { PropsWithChildren, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NextIntlClientProvider } from 'next-intl'
 import { ThemeProvider } from 'next-themes'
+import GTMRouteTracker from '@/components/analytics/gtm-route-tracker'
+import { initializeDataLayer } from '@/lib/gtm'
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 // Create a client
 const queryClient = new QueryClient({
@@ -23,6 +26,11 @@ interface ProvidersProps extends PropsWithChildren {
 }
 
 export function Providers({ children, locale, messages }: ProvidersProps) {
+  // Initialize dataLayer when the component mounts
+  useEffect(() => {
+    initializeDataLayer()
+  }, [])
+
   return (
     <NextIntlClientProvider 
       locale={locale} 
@@ -39,7 +47,11 @@ export function Providers({ children, locale, messages }: ProvidersProps) {
         storageKey="serets-theme"
       >
         <QueryClientProvider client={queryClient}>
+          {/* Add GTM Route Tracker */}
+          <GTMRouteTracker />
           {children}
+          {/* Add Vercel Speed Insights */}
+          <SpeedInsights />
         </QueryClientProvider>
       </ThemeProvider>
     </NextIntlClientProvider>
