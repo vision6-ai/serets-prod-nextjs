@@ -3,6 +3,7 @@
 import { useAuth } from '@/components/auth/auth-provider';
 import { MovieActions } from './movie-actions';
 import { MovieSlider } from './movie-slider';
+import { CastCarousel } from './cast-carousel';
 import { TicketBooking } from '.';
 import type { Movie } from '@/types/movie';
 import { Locale } from '@/config/i18n';
@@ -27,6 +28,7 @@ interface MovieContentProps {
 		slug: string;
 		photo_url: string | null;
 		role: string | null;
+		order: number | null;
 	}[];
 	genres: {
 		id: string;
@@ -141,29 +143,7 @@ export function MovieContent({
 			{/* Cast Section */}
 			{cast.length > 0 && (
 				<section className="mb-12">
-					<h2 className="text-2xl font-semibold mb-6">Cast</h2>
-					<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-						{cast.map((actor) => (
-							<div key={actor.id} className="text-center">
-								<div className="aspect-square rounded-full overflow-hidden mb-2">
-									<img
-										src={actor.photo_url || '/placeholder-avatar.jpg'}
-										alt={actor.name}
-										className="w-full h-full object-cover"
-									/>
-								</div>
-								<h3 className="font-medium">{actor.name}</h3>
-								{actor.hebrew_name && (
-									<p className="text-sm text-muted-foreground">
-										{actor.hebrew_name}
-									</p>
-								)}
-								{actor.role && (
-									<p className="text-sm text-muted-foreground">{actor.role}</p>
-								)}
-							</div>
-						))}
-					</div>
+					<CastCarousel cast={cast} locale={locale as Locale} />
 				</section>
 			)}
 

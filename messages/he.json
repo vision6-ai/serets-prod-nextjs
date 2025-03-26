@@ -175,7 +175,8 @@
 		"no_results": "לא נמצאו סרטים התואמים את המסננים שלך.",
 		"latestReleases": "סרטים חדשים",
 		"topRated": "מדורגים גבוה",
-		"recommendedMovies": "סרטים מומלצים"
+		"recommendedMovies": "סרטים מומלצים",
+		"cast": "שחקנים"
 	},
 	"genres": {
 		"notFound": "ז'אנר לא נמצא",

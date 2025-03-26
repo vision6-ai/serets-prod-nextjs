@@ -175,7 +175,8 @@
 		"no_results": "No movies found matching your filters.",
 		"latestReleases": "Latest Releases",
 		"topRated": "Top Rated",
-		"recommendedMovies": "Recommended Movies"
+		"recommendedMovies": "Recommended Movies",
+		"cast": "Cast"
 	},
 	"genres": {
 		"notFound": "Genre not found",

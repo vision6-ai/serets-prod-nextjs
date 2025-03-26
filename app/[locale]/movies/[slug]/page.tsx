@@ -111,8 +111,9 @@ async function getMovieData(slug: string, locale: Locale) {
 
 		supabase
 			.from('movie_actors')
-			.select('movie_id, actor_id, role')
-			.eq('movie_id', movie.id),
+			.select('movie_id, actor_id, role, order')
+			.eq('movie_id', movie.id)
+			.order('order', { ascending: true }),
 
 		supabase
 			.from('movie_genres')
@@ -163,6 +164,7 @@ async function getMovieData(slug: string, locale: Locale) {
 			return {
 				id: castMember.actor_id,
 				role: castMember.role,
+				order: castMember.order,
 				character_name: null, // This field doesn't exist in movie_actors
 				actor: {
 					id: actorData.id,
@@ -271,6 +273,7 @@ async function getMovieData(slug: string, locale: Locale) {
 			slug: item!.actor.slug,
 			photo_url: item!.actor.photo_url,
 			role: item!.role,
+			order: item!.order || 999 // Use a high default if order is missing
 		})),
 		genres: genres.filter(Boolean).map((item) => ({
 			id: item!.id,
