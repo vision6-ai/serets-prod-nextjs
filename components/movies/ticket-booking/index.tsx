@@ -45,6 +45,7 @@ export function TicketBooking({
 		error,
 		refreshing,
 		handleBooking,
+		handleIframeClose,
 		handleCityChange,
 		handleDateChange,
 		handleShowSelection,
@@ -120,10 +121,12 @@ export function TicketBooking({
 							</div>
 						</>
 					) : (
-						<BookingIframe
-							selectedShow={selectedShow}
-							onBack={() => setShowIframe(false)}
-						/>
+						<div className="hidden md:block h-full">
+							<BookingIframe
+								selectedShow={selectedShow}
+								onBack={() => setShowIframe(false)}
+							/>
+						</div>
 					)}
 				</DialogContent>
 			</DialogRoot>
@@ -143,6 +146,16 @@ export function TicketBooking({
 					{t('orderTickets')}
 				</Button>
 			</div>
+
+			{/* Mobile Full Screen Iframe */}
+			{showIframe && (
+				<div className="md:hidden fixed inset-0 z-[100]">
+					<BookingIframe
+						selectedShow={selectedShow}
+						onBack={handleIframeClose}
+					/>
+				</div>
+			)}
 		</>
 	);
 }

@@ -293,10 +293,9 @@ export function useBooking(countitPid: string) {
 				}
 			}
 		} else {
-			// Reset states when dialog is closed
+			// Reset states when dialog is closed, but keep selectedShow
 			setSelectedCity(null);
 			setSelectedDate(null);
-			setSelectedShow(null);
 			setMovieShows([]);
 			setProcessedShows({});
 			setError(null);
@@ -319,8 +318,18 @@ export function useBooking(countitPid: string) {
 				time: selectedShow.time,
 				showtime_pid: selectedShow.showtime_pid,
 			});
+			// Close dialog on mobile when opening iframe
+			if (typeof window !== 'undefined' && window.innerWidth < 768) {
+				setOpen(false);
+			}
 			setShowIframe(true);
 		}
+	};
+
+	const handleIframeClose = () => {
+		setShowIframe(false);
+		setOpen(false);
+		// Don't reset selectedShow here to maintain the state
 	};
 
 	const handleCityChange = (value: string) => {
@@ -380,6 +389,7 @@ export function useBooking(countitPid: string) {
 		error,
 		refreshing,
 		handleBooking,
+		handleIframeClose,
 		handleCityChange,
 		handleDateChange,
 		handleShowSelection,
