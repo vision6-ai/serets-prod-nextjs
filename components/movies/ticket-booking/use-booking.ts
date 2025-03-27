@@ -3,6 +3,9 @@ import { format } from 'date-fns';
 import { MovieShow, ProcessedShows } from './types';
 import { log } from 'node:console';
 
+// List of chains that should use direct redirect instead of iframe
+const DIRECT_REDIRECT_CHAINS = ['CINEMA-CITY', 'LEV'];
+
 export function useBooking(countitPid: string) {
 	const [open, setOpen] = useState(false);
 	const [showIframe, setShowIframe] = useState(false);
@@ -318,7 +321,24 @@ export function useBooking(countitPid: string) {
 				time: selectedShow.time,
 				showtime_pid: selectedShow.showtime_pid,
 			});
-			// Close dialog on mobile when opening iframe
+
+			// Check if the cinema chain is in the direct redirect list
+			const shouldRedirect = DIRECT_REDIRECT_CHAINS.some((chain) =>
+				selectedShow.cinema.toLowerCase().includes(chain.toLowerCase())
+			);
+
+			if (shouldRedirect) {
+				console.log(
+					'🔄 [Booking] Using direct redirect for chain:',
+					selectedShow.cinema
+				);
+				// Open in new tab
+				window.open(selectedShow.deep_link, '_blank');
+				return;
+			}
+
+			// If not in direct redirect list, use iframe
+			console.log('🎬 [Booking] Using iframe for chain:', selectedShow.cinema);
 			if (typeof window !== 'undefined' && window.innerWidth < 768) {
 				setOpen(false);
 			}
