@@ -291,13 +291,6 @@ export default function VideoPlayer({
 							)}
 						</Button>
 					</div>
-
-					<Button
-						variant="ghost"
-						className="text-white hover:bg-white/20"
-						asChild>
-						<Link href={`/movies/${trailer.movies.slug}`}>View Movie</Link>
-					</Button>
 				</div>
 
 				{/* Movie Info */}
@@ -320,6 +313,16 @@ export default function VideoPlayer({
 						style={{ width: `${progress}%` }}
 					/>
 				</div>
+			</div>
+
+			{/* Always Visible View Movie Button */}
+			<div className="absolute bottom-20 md:bottom-4 right-4 z-50">
+				<Button
+					variant="default"
+					className="bg-primary hover:bg-primary/90 text-white shadow-lg"
+					asChild>
+					<Link href={`/movies/${trailer.movies.slug}`}>View Movie</Link>
+				</Button>
 			</div>
 		</div>
 	);
