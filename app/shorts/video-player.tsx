@@ -253,34 +253,13 @@ export default function VideoPlayer({
 			{/* Controls Overlay */}
 			<div
 				className={cn(
-					'absolute inset-0 flex flex-col justify-between p-6',
+					'absolute inset-0 flex flex-col',
 					'bg-gradient-to-b from-black/50 via-transparent to-black/50',
 					'opacity-0 transition-opacity duration-200',
 					showControls && 'opacity-100'
 				)}>
-				{/* Movie Info */}
-				<div>
-					<h2 className="text-white font-semibold text-lg">
-						{trailer.movies.title || trailer.movies.slug}
-					</h2>
-					{trailer.movies.hebrew_title &&
-						trailer.movies.hebrew_title !== trailer.movies.title && (
-							<p className="text-white/80 text-sm">
-								{trailer.movies.hebrew_title}
-							</p>
-						)}
-				</div>
-
-				{/* Progress Bar */}
-				<div className="absolute bottom-24 left-6 right-6 h-1 bg-white/20 rounded-full overflow-hidden">
-					<div
-						className="h-full bg-primary transition-all duration-200"
-						style={{ width: `${progress}%` }}
-					/>
-				</div>
-
-				{/* Bottom Controls */}
-				<div className="flex items-center justify-between mt-8">
+				{/* Top Controls */}
+				<div className="flex items-center justify-between p-4">
 					<div className="flex items-center gap-2">
 						<Button
 							variant="ghost"
@@ -319,6 +298,27 @@ export default function VideoPlayer({
 						asChild>
 						<Link href={`/movies/${trailer.movies.slug}`}>View Movie</Link>
 					</Button>
+				</div>
+
+				{/* Movie Info */}
+				<div className="px-4 mt-2">
+					<h2 className="text-white font-semibold text-lg">
+						{trailer.movies.title || trailer.movies.slug}
+					</h2>
+					{trailer.movies.hebrew_title &&
+						trailer.movies.hebrew_title !== trailer.movies.title && (
+							<p className="text-white/80 text-sm">
+								{trailer.movies.hebrew_title}
+							</p>
+						)}
+				</div>
+
+				{/* Progress Bar - Moved higher */}
+				<div className="absolute bottom-32 left-4 right-4 h-1 bg-white/20 rounded-full overflow-hidden">
+					<div
+						className="h-full bg-primary transition-all duration-200"
+						style={{ width: `${progress}%` }}
+					/>
 				</div>
 			</div>
 		</div>
