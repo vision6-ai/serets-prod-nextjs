@@ -41,10 +41,12 @@ export default function VideoPlayer({
 	const [ready, setReady] = useState(false);
 	const [userPaused, setUserPaused] = useState(false);
 	const [showControls, setShowControls] = useState(false);
+	const [showCenterButton, setShowCenterButton] = useState(false);
 	const [videoAspectRatio, setVideoAspectRatio] = useState<'portrait' | 'landscape'>('landscape');
 	const videoRef = useRef<HTMLVideoElement>(null);
 	const hlsRef = useRef<Hls | null>(null);
 	const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+	const centerButtonTimeoutRef = useRef<NodeJS.Timeout>();
 	const { ref, inView } = useInView({
 		threshold: 0.6,
 	});
@@ -132,8 +134,13 @@ export default function VideoPlayer({
 	// Handle controls visibility
 	const handleMouseEnter = () => {
 		setShowControls(true);
+		setShowCenterButton(true);
+		
 		if (controlsTimeoutRef.current) {
 			clearTimeout(controlsTimeoutRef.current);
+		}
+		if (centerButtonTimeoutRef.current) {
+			clearTimeout(centerButtonTimeoutRef.current);
 		}
 	};
 
@@ -142,8 +149,12 @@ export default function VideoPlayer({
 			controlsTimeoutRef.current = setTimeout(() => {
 				setShowControls(false);
 			}, 2000);
+			centerButtonTimeoutRef.current = setTimeout(() => {
+				setShowCenterButton(false);
+			}, 1000);
 		} else {
 			setShowControls(true);
+			setShowCenterButton(true);
 		}
 	};
 
@@ -152,6 +163,9 @@ export default function VideoPlayer({
 		return () => {
 			if (controlsTimeoutRef.current) {
 				clearTimeout(controlsTimeoutRef.current);
+			}
+			if (centerButtonTimeoutRef.current) {
+				clearTimeout(centerButtonTimeoutRef.current);
 			}
 		};
 	}, []);
@@ -177,6 +191,11 @@ export default function VideoPlayer({
 			});
 			videoRef.current.play();
 			setPlaying(true);
+			// Hide center button after 1 second when playback starts
+			setShowCenterButton(true);
+			centerButtonTimeoutRef.current = setTimeout(() => {
+				setShowCenterButton(false);
+			}, 1000);
 		}
 		if ((!inView || !isActive) && playing) {
 			console.log('Stopping video playback:', {
@@ -186,6 +205,7 @@ export default function VideoPlayer({
 			videoRef.current.pause();
 			setPlaying(false);
 			setUserPaused(false); // Reset user pause state when video is not active
+			setShowCenterButton(false); // Hide center button immediately when switching videos
 		}
 	}, [inView, isActive, ready, playing, userPaused, trailer.cloudflare_id]);
 
@@ -201,6 +221,16 @@ export default function VideoPlayer({
 		setPlaying(newPlayingState);
 		setUserPaused(!newPlayingState);
 		setShowControls(true);
+		setShowCenterButton(true);
+		
+		// Auto-hide center button after 1 second
+		if (centerButtonTimeoutRef.current) {
+			clearTimeout(centerButtonTimeoutRef.current);
+		}
+		centerButtonTimeoutRef.current = setTimeout(() => {
+			setShowCenterButton(false);
+		}, 1000);
+		
 		console.log('User clicked play/pause:', {
 			videoId: trailer.cloudflare_id,
 			newState: newPlayingState ? 'playing' : 'paused',
@@ -234,6 +264,7 @@ export default function VideoPlayer({
 		console.log('Video Ended:', trailer.cloudflare_id);
 		setPlaying(false);
 		setUserPaused(true);
+		setShowCenterButton(true);
 		if (videoRef.current) {
 			videoRef.current.currentTime = 0;
 		}
@@ -298,8 +329,8 @@ export default function VideoPlayer({
 					'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20',
 					'w-16 h-16 rounded-full bg-black/50 flex items-center justify-center',
 					'opacity-0 transition-opacity duration-200',
-					showControls && 'opacity-100',
-					!playing && 'opacity-100'
+					showCenterButton && 'opacity-100',
+					!playing && showCenterButton && 'opacity-100'
 				)}>
 				{!playing ? (
 					<Play className="h-8 w-8 text-white" />
