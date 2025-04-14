@@ -41,6 +41,7 @@ export default function VideoPlayer({
 	const [ready, setReady] = useState(false);
 	const [userPaused, setUserPaused] = useState(false);
 	const [showControls, setShowControls] = useState(false);
+	const [videoAspectRatio, setVideoAspectRatio] = useState<'portrait' | 'landscape'>('landscape');
 	const videoRef = useRef<HTMLVideoElement>(null);
 	const hlsRef = useRef<Hls | null>(null);
 	const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -93,6 +94,37 @@ export default function VideoPlayer({
 			if (hlsRef.current) {
 				hlsRef.current.destroy();
 				hlsRef.current = null;
+			}
+		};
+	}, [trailer.cloudflare_id]);
+
+	// Detect video aspect ratio on load
+	useEffect(() => {
+		if (!videoRef.current) return;
+		
+		const handleMetadata = () => {
+			if (!videoRef.current) return;
+			
+			const { videoWidth, videoHeight } = videoRef.current;
+			const ratio = videoWidth / videoHeight;
+			
+			console.log('Video Dimensions:', {
+				videoId: trailer.cloudflare_id,
+				width: videoWidth,
+				height: videoHeight,
+				ratio,
+			});
+			
+			// Set aspect ratio type based on dimensions
+			// Standard 16:9 ratio is 1.77
+			setVideoAspectRatio(ratio >= 1.5 ? 'landscape' : 'portrait');
+		};
+		
+		videoRef.current.addEventListener('loadedmetadata', handleMetadata);
+		
+		return () => {
+			if (videoRef.current) {
+				videoRef.current.removeEventListener('loadedmetadata', handleMetadata);
 			}
 		};
 	}, [trailer.cloudflare_id]);
@@ -218,26 +250,52 @@ export default function VideoPlayer({
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={handleMouseLeave}
 			onClick={handlePlayPause}>
-			<video
-				ref={videoRef}
-				className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover"
-				playsInline
-				muted={muted}
-				poster={`https://videodelivery.net/${trailer.cloudflare_id}/thumbnails/thumbnail.jpg`}
-				onTimeUpdate={handleTimeUpdate}
-				onEnded={handleEnded}
-				onError={(e) => {
-					console.error('Video Error:', {
-						videoId: trailer.cloudflare_id,
-						error: e,
-					});
-				}}
-			/>
+			{/* Video Background for 16:9 videos - blurred version */}
+			{videoAspectRatio === 'landscape' && (
+				<div className="absolute inset-0 z-0">
+					<video
+						className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[200%] h-full object-cover blur-md opacity-50"
+						src={`https://videodelivery.net/${trailer.cloudflare_id}/manifest/video.m3u8`}
+						muted
+						playsInline
+						autoPlay
+						loop
+					/>
+				</div>
+			)}
+			
+			{/* Main Video */}
+			<div className={cn(
+				'absolute z-10',
+				videoAspectRatio === 'landscape' 
+					? 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-h-[56.25vw]' // 16:9 ratio in the middle
+					: 'inset-0 w-full h-full' // Full cover for vertical videos
+			)}>
+				<video
+					ref={videoRef}
+					className={cn(
+						videoAspectRatio === 'landscape'
+							? 'w-full h-auto' // For 16:9 videos
+							: 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-cover' // For vertical videos
+					)}
+					playsInline
+					muted={muted}
+					poster={`https://videodelivery.net/${trailer.cloudflare_id}/thumbnails/thumbnail.jpg`}
+					onTimeUpdate={handleTimeUpdate}
+					onEnded={handleEnded}
+					onError={(e) => {
+						console.error('Video Error:', {
+							videoId: trailer.cloudflare_id,
+							error: e,
+						});
+					}}
+				/>
+			</div>
 
 			{/* Center Play/Pause Button */}
 			<div
 				className={cn(
-					'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2',
+					'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20',
 					'w-16 h-16 rounded-full bg-black/50 flex items-center justify-center',
 					'opacity-0 transition-opacity duration-200',
 					showControls && 'opacity-100',
@@ -253,7 +311,7 @@ export default function VideoPlayer({
 			{/* Controls Overlay */}
 			<div
 				className={cn(
-					'absolute inset-0 flex flex-col',
+					'absolute inset-0 flex flex-col z-20',
 					'bg-gradient-to-b from-black/50 via-transparent to-black/50',
 					'opacity-0 transition-opacity duration-200',
 					showControls && 'opacity-100'
