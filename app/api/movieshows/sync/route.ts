@@ -101,7 +101,46 @@ async function fetchShowtimes() {
 
 // Handle both GET and POST methods
 export async function GET(request: NextRequest) {
-	return handleRequest(request);
+	try {
+		// First, invoke the Supabase Edge Function
+		const supabase = createClient(
+			process.env.SUPABASE_URL!,
+			process.env.SUPABASE_ANON_KEY!
+		);
+
+		const { data: edgeFunctionData, error: edgeFunctionError } =
+			await supabase.functions.invoke('sync-movieshows', {
+				body: { name: 'Functions' },
+			});
+
+		if (edgeFunctionError) {
+			console.error('Error invoking sync-movieshows:', edgeFunctionError);
+			return NextResponse.json(
+				{ error: 'Failed to invoke sync-movieshows function' },
+				{ status: 500 }
+			);
+		}
+
+		// Continue with existing functionality
+		const traceId = crypto.randomUUID();
+		consoleInfo('Starting sync process', { traceId });
+
+		// Process the sync in the background
+		processSyncInBackground(traceId);
+
+		return NextResponse.json({
+			success: true,
+			message: 'Sync process started',
+			traceId,
+			edgeFunctionData,
+		});
+	} catch (error) {
+		console.error('Unexpected error:', error);
+		return NextResponse.json(
+			{ error: 'Internal server error' },
+			{ status: 500 }
+		);
+	}
 }
 
 export async function POST(request: NextRequest) {
