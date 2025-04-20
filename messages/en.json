@@ -341,5 +341,9 @@
 			"description": "Our vision is to become Israel's leading cinema discovery and ticketing platform – not just a place to buy tickets, but a cultural space that connects people to the magic of the big screen."
 		},
 		"conclusion": "Join us on a new kind of cinematic journey – where every movie begins with a truly great experience: yours."
+	},
+	"watchlist": {
+		"add": "Save to Watchlist",
+		"remove": "Remove from Watchlist"
 	}
 }

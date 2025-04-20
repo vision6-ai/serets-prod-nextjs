@@ -6,6 +6,7 @@ import { MovieSlider } from './movie-slider';
 import { CastCarousel } from './cast-carousel';
 import { TicketBooking } from '.';
 import { MovieReviews } from './movie-reviews';
+import { WatchlistButton } from './watchlist-button';
 import type { Movie } from '@/types/movie';
 import { Locale } from '@/config/i18n';
 import { useTranslations } from 'next-intl';
@@ -137,6 +138,8 @@ export function MovieContent({
 							movieId={movie.id}
 							trailerUrl={trailer?.url || movie.trailer_url}
 						/>
+
+						<WatchlistButton movieId={movie.id} />
 					</div>
 				</div>
 			</div>

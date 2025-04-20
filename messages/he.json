@@ -122,8 +122,8 @@
 		"password": "סיסמה",
 		"continueWith": "המשך עם",
 		"signUpWith": "הירשם עם",
-		"dontHaveAccount": "אין לך חשבון?",
-		"alreadyHaveAccount": "כבר יש לך חשבון?",
+		"dontHaveAccount": "הרשמה לחשבון חדש",
+		"alreadyHaveAccount": "יש לי חשבון קיים",
 		"termsNotice": "בהמשך, אתה מסכים ל",
 		"termsOfService": "תנאי השירות",
 		"and": "ו",
@@ -132,7 +132,20 @@
 		"signUpWithEmail": "הירשם עם אימייל",
 		"signingIn": "מתחבר...",
 		"continueWithGoogle": "המשך עם Google",
-		"loginSuccess": "התחברת בהצלחה"
+		"loginSuccess": "התחברת בהצלחה",
+		"emailPlaceholder": "הזן את כתובת האימייל שלך",
+		"passwordPlaceholder": "הזן את הסיסמה שלך",
+		"forgotPassword": "שכחת סיסמה?",
+		"confirmationEmailSent": "נשלח אליך מייל לאישור.",
+		"emailRequired": "יש להזין כתובת אימייל.",
+		"passwordRequired": "יש להזין סיסמה.",
+		"emailInvalid": "כתובת האימייל אינה תקינה.",
+		"passwordTooShort": "הסיסמה קצרה מדי.",
+		"passwordTooWeak": "הסיסמה חלשה מדי.",
+		"emailAlreadyExists": "כתובת האימייל כבר קיימת.",
+		"emailNotConfirmed": "כתובת האימייל לא אושרה.",
+		"invalidLoginCredentials": "פרטי ההתחברות שגויים.",
+		"unexpectedError": "אירעה שגיאה לא צפויה. נסה שוב."
 	},
 	"Profile": {
 		"myProfile": "הפרופיל שלי",
@@ -344,5 +357,9 @@
 		"anonymousUser": "משתמש אנונימי",
 		"showMore": "הצג עוד",
 		"showLess": "הצג פחות"
+	},
+	"watchlist": {
+		"add": "שמור לרשימת הצפייה",
+		"remove": "הסר מרשימת הצפייה"
 	}
 }
