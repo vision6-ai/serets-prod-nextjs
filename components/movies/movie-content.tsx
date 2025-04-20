@@ -5,6 +5,7 @@ import { MovieActions } from './movie-actions';
 import { MovieSlider } from './movie-slider';
 import { CastCarousel } from './cast-carousel';
 import { TicketBooking } from '.';
+import { MovieReviews } from './movie-reviews';
 import type { Movie } from '@/types/movie';
 import { Locale } from '@/config/i18n';
 import { useTranslations } from 'next-intl';
@@ -170,6 +171,11 @@ export function MovieContent({
 					</div>
 				</section>
 			)}
+
+			{/* Reviews Section */}
+			<section className="mb-12">
+				<MovieReviews movieId={movie.id} />
+			</section>
 
 			{/* Recommended Movies */}
 			{similarMovies.length > 0 && (
