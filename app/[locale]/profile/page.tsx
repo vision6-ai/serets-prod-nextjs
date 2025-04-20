@@ -4,10 +4,19 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editOpen, setEditOpen] = useState(false)
+  const [displayName, setDisplayName] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
     let isMounted = true;
@@ -20,6 +29,7 @@ export default function ProfilePage() {
         if (error) throw error
         if (isMounted) {
           setUser(user)
+          setDisplayName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || '')
         }
       } catch (error) {
         console.error('Error fetching user:', error)
@@ -69,6 +79,29 @@ export default function ProfilePage() {
     return null
   }
 
+  // Handle profile update
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    setSuccessMsg('')
+    setErrorMsg('')
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: displayName })
+        .eq('id', user.id)
+      if (error) throw error
+      setSuccessMsg('Profile updated successfully!')
+      setEditOpen(false)
+      // Optionally, update user_metadata locally
+      setUser({ ...user, user_metadata: { ...user.user_metadata, full_name: displayName } })
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="container py-8">
       <h1 className="text-3xl font-bold mb-8">My Profile</h1>
@@ -84,10 +117,39 @@ export default function ProfilePage() {
                 {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
               </h2>
               <p className="text-muted-foreground">{user.email}</p>
+              <Button size="sm" className="mt-2" onClick={() => setEditOpen(true)}>
+                Edit Profile
+              </Button>
             </div>
           </div>
+          {successMsg && <div className="text-green-600 text-sm">{successMsg}</div>}
+          {errorMsg && <div className="text-red-600 text-sm">{errorMsg}</div>}
         </div>
       </div>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div>
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                placeholder="Enter your display name"
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

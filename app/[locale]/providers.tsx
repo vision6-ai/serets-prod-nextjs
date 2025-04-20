@@ -7,6 +7,8 @@ import { ThemeProvider } from 'next-themes'
 import GTMRouteTracker from '@/components/analytics/gtm-route-tracker'
 import { initializeDataLayer } from '@/lib/gtm'
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { SessionContextProvider } from '@supabase/auth-helpers-react'
+import { supabase } from '@/lib/supabase'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -32,28 +34,30 @@ export function Providers({ children, locale, messages }: ProvidersProps) {
   }, [])
 
   return (
-    <NextIntlClientProvider 
-      locale={locale} 
-      messages={messages}
-      // The timeZone is now handled by i18n.config.ts
-      timeZone="America/New_York"
-      now={new Date()}
-    >
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem={true}
-        disableTransitionOnChange={false}
-        storageKey="serets-theme"
+    <SessionContextProvider supabaseClient={supabase}>
+      <NextIntlClientProvider 
+        locale={locale} 
+        messages={messages}
+        // The timeZone is now handled by i18n.config.ts
+        timeZone="America/New_York"
+        now={new Date()}
       >
-        <QueryClientProvider client={queryClient}>
-          {/* Add GTM Route Tracker */}
-          <GTMRouteTracker />
-          {children}
-          {/* Add Vercel Speed Insights */}
-          <SpeedInsights />
-        </QueryClientProvider>
-      </ThemeProvider>
-    </NextIntlClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem={true}
+          disableTransitionOnChange={false}
+          storageKey="serets-theme"
+        >
+          <QueryClientProvider client={queryClient}>
+            {/* Add GTM Route Tracker */}
+            <GTMRouteTracker />
+            {children}
+            {/* Add Vercel Speed Insights */}
+            <SpeedInsights />
+          </QueryClientProvider>
+        </ThemeProvider>
+      </NextIntlClientProvider>
+    </SessionContextProvider>
   )
 }

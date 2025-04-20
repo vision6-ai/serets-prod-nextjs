@@ -113,7 +113,7 @@ export function UserProfileMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href={`/${locale}/profile`}>
+            <Link href="/profile">
               <UserIcon className="mr-2 h-4 w-4" />
               <span>{t('profile')}</span>
             </Link>

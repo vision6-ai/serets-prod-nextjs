@@ -53,19 +53,15 @@ export default async function RootLayout({
             })(window,document,'script','dataLayer','${GTM_ID}');`,
           }}
         />
+        {/* Google Tag Manager - NoScript (moved to head) */}
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html: `<iframe src="https://www.googletagmanager.com/ns.html?id=${GTM_ID}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`
+          }}
+        />
         {/* End Google Tag Manager */}
       </head>
       <body suppressHydrationWarning>
-        {/* Google Tag Manager - NoScript */}
-        <noscript>
-          <iframe 
-            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
-            height="0" 
-            width="0" 
-            style={{ display: 'none', visibility: 'hidden' }}
-          />
-        </noscript>
-        {/* End Google Tag Manager - NoScript */}
         <Providers locale={locale} messages={messages}>
           <HeaderClient locale={locale} />
           <main className="container mx-auto px-4 py-8">

@@ -1,18 +1,12 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs'
 import { type Database } from '@/types/supabase'
 
 // Create a single supabase client for interacting with your database
-export const supabase = createClientComponentClient<Database>({
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-})
+export const supabase = createBrowserSupabaseClient<Database>()
 
 // Also export the createClient function for components that need a fresh instance
 export function createClient() {
-  return createClientComponentClient<Database>({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  })
+  return createBrowserSupabaseClient<Database>()
 }
 
 // Enhanced client with error handling and retries
