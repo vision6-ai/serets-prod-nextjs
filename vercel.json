@@ -52,6 +52,6 @@
 	"env": {
 		"NEXT_PUBLIC_SUPABASE_URL": "https://llasjkahpdovjshvroky.supabase.co",
 		"NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsYXNqa2FocGRvdmpzaHZyb2t5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAyMTk0NjYsImV4cCI6MjA1NTc5NTQ2Nn0.2T1MtqqfSfAwLI2F0lCx2ThVImS9GMHsyL6DtxQyJJM",
-		"NEXT_PUBLIC_SITE_URL": "https://serets-prod-nextjs.vercel.app"
+		"NEXT_PUBLIC_SITE_URL": "https://movietime.co.il"
 	}
 }

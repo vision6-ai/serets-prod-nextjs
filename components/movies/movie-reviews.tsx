@@ -28,7 +28,6 @@ export function MovieReviews({ movieId }: MovieReviewsProps) {
     try {
       setLoading(true);
       setError(null);
-      console.log('MovieReviews: Fetching reviews for movie:', movieId);
       
       const result = await fetchWithRetry(async () => {
         // First get the reviews
@@ -37,21 +36,15 @@ export function MovieReviews({ movieId }: MovieReviewsProps) {
           .select('*')
           .eq('movie_id', movieId)
           .order('created_at', { ascending: false });
-
-        console.log('Supabase raw query result:', { reviews, reviewsError });
-        console.log('SQL equivalent:', `SELECT * FROM reviews WHERE movie_id = '${movieId}' ORDER BY created_at DESC`);
         
         if (reviewsError) throw reviewsError;
         
         if (!reviews || reviews.length === 0) {
           return [];
         }
-
-        console.log('Reviews data:', reviews);
         
         // Get unique user IDs from the reviews
         const userIds = [...new Set(reviews.map(review => review.user_id))];
-        console.log('Unique user IDs:', userIds);
         
         // Create a map to store profiles by user ID
         const profilesMap: Record<string, any> = {};
@@ -63,29 +56,17 @@ export function MovieReviews({ movieId }: MovieReviewsProps) {
             .select('*')
             .in('id', userIds);
           
-          console.log('Profiles data:', profiles);
-          console.log('Profiles error:', profilesError);
-          
           if (!profilesError && profiles) {
             // Create a map of profiles by user ID
             profiles.forEach(profile => {
               profilesMap[profile.id] = profile;
             });
-          } else {
-            console.warn('Failed to fetch profile data:', profilesError);
           }
-        }
-        
-        // If we don't have profiles, let's try to get user data directly
-        if (Object.keys(profilesMap).length === 0) {
-          console.log('No profiles found in the database. You need to create profiles table and populate it.');
-          console.log('Showing fallback user information.');
         }
         
         // Combine review data with profile data
         const reviewsWithProfiles = reviews.map(review => {
           const profile = profilesMap[review.user_id];
-          console.log(`Profile for user ${review.user_id.slice(0,8)}:`, profile);
           
           return {
             ...review,
@@ -104,29 +85,32 @@ export function MovieReviews({ movieId }: MovieReviewsProps) {
         return reviewsWithProfiles;
       });
 
-      console.log('MovieReviews: Fetched reviews:', result);
-      console.log('MovieReviews: Setting reviews state with:', result?.length || 0, 'reviews');
       setReviews(result as MovieReview[] || []);
     } catch (error: any) {
+      const errorMessage = error.message || 'Failed to fetch reviews';
+      setError(errorMessage);
+      
+      // Even though console logs are removed in production, log it anyway
+      // for potential server-side debugging
       console.error('MovieReviews: Error in fetchReviews:', error);
-      setError(error.message || 'Failed to fetch reviews');
+      
+      // If this is in production, we could send this error to an error tracking service
+      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+        // You could add a service like Sentry here
+        // e.g., Sentry.captureException(error);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('MovieReviews: useEffect triggered with movieId:', movieId);
     if (movieId) {
       fetchReviews();
     }
   }, [movieId]);
 
   const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 3);
-  console.log('MovieReviews: RENDER - Total reviews:', reviews.length);
-  console.log('MovieReviews: RENDER - Displayed reviews:', displayedReviews.length);
-  console.log('MovieReviews: RENDER - Reviews data:', reviews);
-  console.log('MovieReviews: RENDER - displayedReviews data:', displayedReviews);
   
   const getUserName = (review: MovieReview) => {
     // Try to get the full name from profiles
