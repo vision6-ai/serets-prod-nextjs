@@ -7,6 +7,7 @@ import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { createClient } from '@/lib/supabase'
 import { useTheme } from 'next-themes'
 import { useTranslations, useLocale } from 'next-intl'
+import { launchConfetti } from '@/lib/confetti'
 
 interface AuthDialogProps {
   open: boolean
@@ -24,13 +25,24 @@ export function AuthDialog({ open, onOpenChange, redirectTo }: AuthDialogProps) 
   // Set the origin URL for redirect
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setOrigin(window.location.origin)
+      setOrigin(window.location.href)
     }
   }, [])
 
+  // Confetti on successful login/signup
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        launchConfetti();
+        onOpenChange(false);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase, onOpenChange]);
+
   // Prepare the full redirect URL
   const fullRedirectUrl = redirectTo 
-    ? (redirectTo.startsWith('http') ? redirectTo : `${origin}${redirectTo}`)
+    ? (redirectTo.startsWith('http') ? redirectTo : `${origin}`)
     : origin
 
   return (
