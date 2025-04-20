@@ -9,8 +9,32 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { MovieReview } from '@/types/review';
 import { MovieReviewForm } from './movie-review-form';
+
+// Define the MovieReview type inline since we're recreating the component
+interface MovieReview {
+  id: string;
+  movie_id: string;
+  user_id: string;
+  rating: number;
+  content: string | null;
+  created_at: string;
+  updated_at: string | null;
+  profiles?: {
+    id: string;
+    full_name?: string;
+    email?: string;
+    avatar_url?: string;
+  } | null;
+  user?: {
+    id: string;
+    email?: string;
+    raw_user_meta_data?: {
+      full_name?: string;
+      avatar_url?: string;
+    };
+  };
+}
 
 interface MovieReviewsProps {
   movieId: string;
@@ -90,15 +114,8 @@ export function MovieReviews({ movieId }: MovieReviewsProps) {
       const errorMessage = error.message || 'Failed to fetch reviews';
       setError(errorMessage);
       
-      // Even though console logs are removed in production, log it anyway
-      // for potential server-side debugging
+      // Log error for server-side debugging (will be removed in production)
       console.error('MovieReviews: Error in fetchReviews:', error);
-      
-      // If this is in production, we could send this error to an error tracking service
-      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-        // You could add a service like Sentry here
-        // e.g., Sentry.captureException(error);
-      }
     } finally {
       setLoading(false);
     }

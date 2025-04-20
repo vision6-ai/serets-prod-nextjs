@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Star, StarHalf } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
-import { MovieReviewFormData } from '@/types/review';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
@@ -15,6 +14,12 @@ import { useTranslations } from 'next-intl';
 interface MovieReviewFormProps {
   movieId: string;
   onReviewSubmitted: () => void;
+}
+
+// Define the form data interface
+interface MovieReviewFormData {
+  rating: number;
+  content: string;
 }
 
 export function MovieReviewForm({ movieId, onReviewSubmitted }: MovieReviewFormProps) {
@@ -129,7 +134,7 @@ export function MovieReviewForm({ movieId, onReviewSubmitted }: MovieReviewFormP
         <AuthDialog 
           open={isAuthDialogOpen} 
           onOpenChange={setIsAuthDialogOpen} 
-          redirectTo={window.location.href}
+          redirectTo={typeof window !== 'undefined' ? window.location.href : ''}
         />
       </div>
     );

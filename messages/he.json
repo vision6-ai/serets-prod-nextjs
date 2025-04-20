@@ -129,7 +129,10 @@
 		"and": "ו",
 		"privacyPolicy": "מדיניות פרטיות",
 		"or": "או",
-		"signUpWithEmail": "הירשם עם אימייל"
+		"signUpWithEmail": "הירשם עם אימייל",
+		"signingIn": "מתחבר...",
+		"continueWithGoogle": "המשך עם Google",
+		"loginSuccess": "התחברת בהצלחה"
 	},
 	"Profile": {
 		"myProfile": "הפרופיל שלי",
@@ -318,5 +321,28 @@
 			"description": "החזון שלנו הוא להפוך לחוויית הדיסקברי המובילה בתחום הקולנוע בישראל – לא רק כאתר שמוכר כרטיסים, אלא כמרחב תרבותי שמחבר בין אנשים לסיפורים הגדולים של המסך."
 		},
 		"conclusion": "צאו איתנו למסע קולנועי חדש, שבו כל סרט מתחיל קודם כל בחוויה – שלכם."
+	},
+	"reviews": {
+		"userReviews": "ביקורות משתמשים",
+		"writeReview": "כתוב ביקורת",
+		"loginToReview": "התחבר כדי לשתף את הביקורת שלך",
+		"signIn": "התחבר",
+		"rating": "דירוג",
+		"review": "ביקורת",
+		"shareTroughts": "שתף את מחשבותיך על הסרט הזה...",
+		"submitReview": "שלח ביקורת",
+		"submitting": "שולח...",
+		"reviewSubmitted": "הביקורת נשלחה",
+		"reviewSubmittedMsg": "תודה ששיתפת את הביקורת שלך!",
+		"reviewUpdated": "הביקורת עודכנה",
+		"reviewUpdatedMsg": "הביקורת שלך עודכנה בהצלחה.",
+		"errorSubmitting": "שגיאה בשליחת הביקורת",
+		"tryAgain": "אנא נסה שוב מאוחר יותר.",
+		"ratingRequired": "נדרש דירוג",
+		"pleaseSelectRating": "אנא בחר דירוג לפני שליחת הביקורת שלך.",
+		"noReviews": "אין עדיין ביקורות. היה הראשון לשתף את מחשבותיך!",
+		"anonymousUser": "משתמש אנונימי",
+		"showMore": "הצג עוד",
+		"showLess": "הצג פחות"
 	}
 }
