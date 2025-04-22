@@ -13,9 +13,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { Copy, Share2, Facebook, Twitter, Pencil, QrCode } from 'lucide-react';
+import { Copy, Share2, Facebook, Twitter, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import QRCode from 'qrcode.react';
 
 interface ProfileProps {
   id: string;

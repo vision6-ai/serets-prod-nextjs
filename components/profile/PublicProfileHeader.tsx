@@ -3,12 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Copy, Share2, Facebook, Twitter, Pencil, QrCode } from 'lucide-react';
+import { Copy, Share2, Facebook, Twitter, Pencil } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import dynamic from 'next/dynamic';
-
-// Import QRCode component with SSR disabled to prevent hydration errors
-const QRCodeComponent = dynamic(() => import('qrcode.react'), { ssr: false });
 
 interface PublicProfileHeaderProps {
   avatarUrl?: string | null;
@@ -27,7 +23,6 @@ export function PublicProfileHeader({
 }: PublicProfileHeaderProps) {
   const { toast } = useToast();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [profileUrl, setProfileUrl] = useState<string>(`/${locale}/profile/${username}`);
   
   // Set up URL only on client-side to prevent hydration errors
@@ -75,10 +70,6 @@ export function PublicProfileHeader({
     setShareDialogOpen(false);
   };
   
-  const showQrCode = () => {
-    setQrDialogOpen(true);
-  };
-  
   return (
     <div className="flex flex-col items-center gap-4 py-8 border-b mb-6">
       <div className="relative">
@@ -108,11 +99,6 @@ export function PublicProfileHeader({
         <Button variant="outline" onClick={handleShare} size="sm" className="flex items-center gap-1">
           <Share2 className="w-4 h-4" />
           שתף
-        </Button>
-        
-        <Button variant="outline" onClick={showQrCode} size="sm" className="flex items-center gap-1">
-          <QrCode className="w-4 h-4" />
-          QR
         </Button>
         
         {isOwner && (
@@ -170,23 +156,6 @@ export function PublicProfileHeader({
               <Copy className="h-4 w-4" />
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* QR Code Dialog */}
-      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>קוד QR לפרופיל</DialogTitle>
-          </DialogHeader>
-          <div className="flex justify-center p-4">
-            {typeof window !== 'undefined' && (
-              <QRCodeComponent value={profileUrl} size={256} />
-            )}
-          </div>
-          <p className="text-center text-sm text-muted-foreground">
-            סרוק את קוד ה-QR כדי להגיע לפרופיל זה
-          </p>
         </DialogContent>
       </Dialog>
     </div>
