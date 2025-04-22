@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { redirect } from 'next/navigation'
+import { redirect, useParams } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { ProfileHeader } from '@/components/profile/ProfileHeader'
+import { ProfileWatchlist } from '@/components/profile/ProfileWatchlist'
+import { ProfileReviews } from '@/components/profile/ProfileReviews'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { fetchUserWatchlist, WatchlistMovie } from '@/lib/fetchUserWatchlist'
+import { fetchUserReviews, UserReview } from '@/lib/fetchUserReviews'
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null)
@@ -17,6 +23,14 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [watchlist, setWatchlist] = useState<WatchlistMovie[]>([])
+  const [watchlistLoading, setWatchlistLoading] = useState(true)
+  const [watchlistError, setWatchlistError] = useState<string | null>(null)
+  const [reviews, setReviews] = useState<UserReview[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(true)
+  const [reviewsError, setReviewsError] = useState<string | null>(null)
+  const params = useParams();
+  const locale = params && typeof params.locale === 'string' ? params.locale : 'en';
 
   useEffect(() => {
     let isMounted = true;
@@ -58,6 +72,52 @@ export default function ProfilePage() {
       console.log('ProfilePage: cleanup')
     }
   }, [])
+
+  // Fetch watchlist after user is loaded
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadWatchlist = async () => {
+      setWatchlistLoading(true);
+      setWatchlistError(null);
+      
+      try {
+        const movies = await fetchUserWatchlist(user.id, locale);
+        setWatchlist(movies);
+      } catch (error) {
+        console.error('Error fetching watchlist:', error);
+        setWatchlistError(error instanceof Error ? error.message : 'Failed to load watchlist');
+        setWatchlist([]);
+      } finally {
+        setWatchlistLoading(false);
+      }
+    };
+    
+    loadWatchlist();
+  }, [user, locale]);
+
+  // Fetch reviews after user is loaded
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadReviews = async () => {
+      setReviewsLoading(true);
+      setReviewsError(null);
+      
+      try {
+        const userReviews = await fetchUserReviews(user.id, locale);
+        setReviews(userReviews);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        setReviewsError(error instanceof Error ? error.message : 'Failed to load reviews');
+        setReviews([]);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+    
+    loadReviews();
+  }, [user, locale]);
 
   console.log('ProfilePage: render', { loading, user })
 
@@ -104,28 +164,38 @@ export default function ProfilePage() {
 
   return (
     <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-8">My Profile</h1>
+      <ProfileHeader
+        avatarUrl={undefined}
+        displayName={user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+        username={user.user_metadata?.username || user.email?.split('@')[0] || 'user'}
+        isOwner={true}
+        onEdit={() => setEditOpen(true)}
+      />
       <div className="max-w-2xl mx-auto">
-        <div className="space-y-6">
-          {/* User Info */}
-          <div className="flex items-center gap-4">
-            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-2xl font-bold">
-              {user.email?.substring(0, 2).toUpperCase() || 'U'}
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">
-                {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
-              </h2>
-              <p className="text-muted-foreground">{user.email}</p>
-              <Button size="sm" className="mt-2" onClick={() => setEditOpen(true)}>
-                Edit Profile
-              </Button>
-            </div>
-          </div>
-          {successMsg && <div className="text-green-600 text-sm">{successMsg}</div>}
-          {errorMsg && <div className="text-red-600 text-sm">{errorMsg}</div>}
-        </div>
+        {successMsg && <div className="text-green-600 text-sm">{successMsg}</div>}
+        {errorMsg && <div className="text-red-600 text-sm">{errorMsg}</div>}
       </div>
+      {/* Watchlist Section */}
+      {watchlistLoading ? (
+        <div className="py-12 text-center text-muted-foreground">טוען רשימת צפייה...</div>
+      ) : watchlistError ? (
+        <div className="py-12 text-center text-red-500">
+          שגיאה בטעינת רשימת הצפייה: {watchlistError}
+        </div>
+      ) : (
+        <ProfileWatchlist movies={watchlist} />
+      )}
+      
+      {/* Reviews Section */}
+      {reviewsLoading ? (
+        <div className="py-12 text-center text-muted-foreground">טוען ביקורות...</div>
+      ) : reviewsError ? (
+        <div className="py-12 text-center text-red-500">
+          שגיאה בטעינת הביקורות: {reviewsError}
+        </div>
+      ) : (
+        <ProfileReviews reviews={reviews} />
+      )}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
