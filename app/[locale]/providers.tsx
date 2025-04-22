@@ -35,29 +35,29 @@ export function Providers({ children, locale, messages }: ProvidersProps) {
 
   return (
     <SessionContextProvider supabaseClient={supabase}>
-      <NextIntlClientProvider 
-        locale={locale} 
-        messages={messages}
-        // The timeZone is now handled by i18n.config.ts
-        timeZone="America/New_York"
-        now={new Date()}
+    <NextIntlClientProvider 
+      locale={locale} 
+      messages={messages}
+      // The timeZone is now handled by i18n.config.ts
+      timeZone="America/New_York"
+      now={new Date()}
+    >
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem={true}
+        disableTransitionOnChange={false}
+        storageKey="serets-theme"
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem={true}
-          disableTransitionOnChange={false}
-          storageKey="serets-theme"
-        >
-          <QueryClientProvider client={queryClient}>
-            {/* Add GTM Route Tracker */}
-            <GTMRouteTracker />
-            {children}
-            {/* Add Vercel Speed Insights */}
-            <SpeedInsights />
-          </QueryClientProvider>
-        </ThemeProvider>
-      </NextIntlClientProvider>
+        <QueryClientProvider client={queryClient}>
+          {/* Add GTM Route Tracker */}
+          <GTMRouteTracker />
+          {children}
+          {/* Add Vercel Speed Insights */}
+          <SpeedInsights />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </NextIntlClientProvider>
     </SessionContextProvider>
   )
 }
