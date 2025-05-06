@@ -367,7 +367,7 @@ export function MobileMenu({
                   )} />
                 </Link>
 
-                {/* Commenting out Blog link as it's not ready yet
+                {/* Blog Link */}
                 <Link
                   href="/blog"
                   className="flex items-center justify-between py-3 px-1 text-base font-medium border-b"
@@ -379,7 +379,6 @@ export function MobileMenu({
                     isRtl && "transform rotate-180"
                   )} />
                 </Link>
-                */}
               </Accordion>
             </div>
           </div>

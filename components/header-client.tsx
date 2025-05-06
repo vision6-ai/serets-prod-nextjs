@@ -275,6 +275,14 @@ export default function HeaderClient({ locale }: { locale: string }) {
           </Link>
         </NavigationMenuLink>
       </NavigationMenuItem>
+
+      <NavigationMenuItem>
+        <NavigationMenuLink asChild>
+          <Link href="/blog" className={navigationMenuTriggerStyle()}>
+            {t('blog')}
+          </Link>
+        </NavigationMenuLink>
+      </NavigationMenuItem>
     </NavigationMenuList>
   ), [categories, theaters, t, locale])
 

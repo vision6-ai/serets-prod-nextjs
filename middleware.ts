@@ -10,54 +10,49 @@ const intlMiddleware = createMiddleware({
 	localePrefix: 'always',
 });
 
-export async function middleware(request: NextRequest) {
+// The allowed email for dashboard access
+const ALLOWED_EMAIL = 'yinon@vision6.ai';
+
+export async function middleware(req: NextRequest) {
 	const res = NextResponse.next();
-	const supabase = createMiddlewareClient({ req: request, res });
+	const supabase = createMiddlewareClient({ req, res });
 
-	// Check auth session
-	const {
-		data: { session },
-	} = await supabase.auth.getSession();
+	// Check if the request is for the dashboard
+	if (req.nextUrl.pathname.startsWith('/dashboard')) {
+		// Skip authentication check for login page
+		if (req.nextUrl.pathname === '/dashboard/login') {
+			return res;
+		}
+		
+		// Check user authentication
+		const { data: { session } } = await supabase.auth.getSession();
 
-	// Get the pathname
-	const { pathname } = request.nextUrl;
+		// If not authenticated, redirect to login
+		if (!session) {
+			const redirectUrl = new URL('/dashboard/login', req.url);
+			return NextResponse.redirect(redirectUrl);
+		}
 
-	// Check if it's an SEO file (sitemap.xml or robots.txt)
-	if (pathname === '/sitemap.xml' || pathname === '/robots.txt') {
-		return NextResponse.next();
+		// Check if user has the allowed email
+		const userEmail = session.user?.email;
+
+		if (userEmail !== ALLOWED_EMAIL) {
+			// User is authenticated but not authorized
+			// Sign them out and redirect to login
+			await supabase.auth.signOut();
+
+			const redirectUrl = new URL('/dashboard/login?unauthorized=true', req.url);
+			return NextResponse.redirect(redirectUrl);
+		}
 	}
 
-	// Check if it's a direct route without locale
-	const isNonLocalizedRoute = /^\/(actors|movies|genres)/.test(pathname);
-
-	// Redirect non-localized routes to include the default locale
-	if (isNonLocalizedRoute) {
-		return NextResponse.redirect(new URL(`/en${pathname}`, request.url));
-	}
-
-	// Check if it's a profile page request
-	const isProfilePage = /\/(he|en)\/profile/.test(pathname);
-
-	// Handle profile page access
-	if (isProfilePage && !session) {
-		// Get the locale from the pathname
-		const locale = pathname.startsWith('/he/') ? 'he' : 'en';
-		// Redirect to auth page with the correct locale
-		return NextResponse.redirect(new URL(`/${locale}/auth`, request.url));
-	}
-
-	// Continue with the intl middleware
-	return intlMiddleware(request);
+	// Continue for all other requests
+	return res;
 }
 
 export const config = {
 	matcher: [
-		'/',
-		'/(he|en)/:path*',
-		'/actors/:path*',
-		'/movies/:path*',
-		'/genres/:path*',
-		'/sitemap.xml',
-		'/robots.txt',
+		// Match all dashboard routes
+		'/dashboard/:path*',
 	],
 };
