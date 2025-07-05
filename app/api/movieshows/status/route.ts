@@ -1,46 +1,120 @@
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Initialize Supabase admin client
+const supabaseAdmin = createClient(
+	process.env.NEXT_PUBLIC_SUPABASE_URL!,
+	process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const traceId = searchParams.get('traceId');
+	try {
+		const { searchParams } = new URL(request.url);
+		const includeFailedMovies =
+			searchParams.get('includeFailedMovies') === 'true';
+		const limit = parseInt(searchParams.get('limit') || '10');
 
-    if (!traceId) {
-      return NextResponse.json(
-        { error: 'Missing traceId parameter' },
-        { status: 400 }
-      );
-    }
+		// Get recent sync operations
+		const { data: recentLogs, error: logsError } = await supabaseAdmin
+			.from('logs')
+			.select('*')
+			.eq('level', 'info')
+			.ilike('message', '%Operation completed: movieshows_sync%')
+			.order('created_at', { ascending: false })
+			.limit(limit);
 
-    // In a production app, you would query your logging service or a database
-    // to get the actual status of the background job. This is a simplified example.
-    
-    // For demonstration, we'll return a mock status
-    // In reality, you would extract this from your logs or a status database
-    
-    // Simulate checking status by logging the check
-    console.log('Status check for background job', {
-      traceId,
-      timestamp: new Date().toISOString(),
-    });
+		if (logsError) {
+			return NextResponse.json(
+				{ error: 'Failed to fetch sync logs' },
+				{ status: 500 }
+			);
+		}
 
-    return NextResponse.json({
-      success: true,
-      message: "This is a simulated status check. In a real implementation, you would query your logging service or database for the actual status.",
-      status: "IN_PROGRESS",
-      traceId,
-      note: "To see the actual progress, check your logs and filter by the traceId."
-    });
-  } catch (error) {
-    console.error('Error in status check', error, {
-      timestamp: new Date().toISOString(),
-    });
-    return NextResponse.json(
-      {
-        error: 'Server error',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
-  }
-} 
+		// Get recent failed movies if requested
+		let failedMoviesLogs = null;
+		if (includeFailedMovies) {
+			const { data: failedLogs, error: failedLogsError } = await supabaseAdmin
+				.from('logs')
+				.select('*')
+				.eq('level', 'error')
+				.or(
+					'message.ilike.%failed movies%,message.ilike.%batch insertion failed%'
+				)
+				.order('created_at', { ascending: false })
+				.limit(limit);
+
+			if (!failedLogsError) {
+				failedMoviesLogs = failedLogs;
+			}
+		}
+
+		// Get latest movieshows count
+		const { count: totalMovieshows, error: countError } = await supabaseAdmin
+			.from('movieshows')
+			.select('*', { count: 'exact', head: true });
+
+		if (countError) {
+			return NextResponse.json(
+				{ error: 'Failed to fetch movieshows count' },
+				{ status: 500 }
+			);
+		}
+
+		// Process recent logs to extract summary information
+		const processedLogs =
+			recentLogs?.map((log) => {
+				const metadata = log.metadata || {};
+				return {
+					timestamp: log.created_at,
+					traceId: metadata.traceId,
+					totalProcessed: metadata.totalProcessed || 0,
+					newlyInserted: metadata.newlyInserted || 0,
+					alreadyExisting: metadata.alreadyExisting || 0,
+					totalFailedMovies: metadata.totalFailedMovies || 0,
+					failureBreakdown: metadata.failureBreakdown || {},
+					processingTime: metadata.processingTime || 0,
+					fetchTime: metadata.fetchTime || 0,
+				};
+			}) || [];
+
+		// Process failed movies logs
+		const processedFailedMovies =
+			failedMoviesLogs?.map((log) => {
+				const metadata = log.metadata || {};
+				return {
+					timestamp: log.created_at,
+					message: log.message,
+					traceId: metadata.traceId,
+					summary: metadata.summary || {},
+					failedMovies: metadata.allFailedMovies || metadata.failedMovies || [],
+					batchNumber: metadata.batchNumber,
+					insertError: metadata.insertError,
+				};
+			}) || [];
+
+		return NextResponse.json({
+			success: true,
+			data: {
+				totalMovieshows,
+				recentSyncOperations: processedLogs,
+				...(includeFailedMovies && {
+					failedMoviesLogs: processedFailedMovies,
+					failedMoviesCount: processedFailedMovies.reduce(
+						(sum, log) => sum + (log.failedMovies?.length || 0),
+						0
+					),
+				}),
+			},
+			timestamp: new Date().toISOString(),
+		});
+	} catch (error) {
+		console.error('Error in status endpoint:', error);
+		return NextResponse.json(
+			{
+				error: 'Internal server error',
+				details: error instanceof Error ? error.message : 'Unknown error',
+			},
+			{ status: 500 }
+		);
+	}
+}

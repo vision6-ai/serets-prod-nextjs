@@ -175,8 +175,10 @@
 		"no_results": "לא נמצאו סרטים התואמים את המסננים שלך.",
 		"latestReleases": "סרטים חדשים",
 		"topRated": "מדורגים גבוה",
+		"comingSoon": "בקרוב",
 		"recommendedMovies": "סרטים מומלצים",
-		"cast": "שחקנים"
+		"cast": "שחקנים",
+		"watchTrailer": "צפה בטריילר"
 	},
 	"actors": {
 		"biography": "ביוגרפיה",
@@ -246,6 +248,7 @@
 		}
 	},
 	"cities": {
+		"Afula": "עפולה",
 		"Ashdod": "אשדוד",
 		"Ashkelon": "אשקלון",
 		"Ayalon": "איילון",

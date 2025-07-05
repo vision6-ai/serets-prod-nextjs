@@ -20,7 +20,7 @@ const SHOWTIMES_API_URL =
 const API_KEY = process.env.SHOWTIMES_API_KEY;
 
 // This configures the route as a Vercel Background Function
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const preferredRegion = 'fra1'; // Europe (Frankfurt)
 export const maxDuration = 300; // 5 minutes
 
@@ -35,12 +35,31 @@ async function fetchShowtimes() {
 			throw new Error('Missing required environment variables for Supabase');
 		}
 
+		// Validate API key
+		if (!API_KEY) {
+			throw new Error('SHOWTIMES_API_KEY environment variable is not set');
+		}
+
+		const fullUrl = `${SHOWTIMES_API_URL}?key=${API_KEY}`;
+
 		consoleInfo('Fetching showtimes from external API', {
 			url: SHOWTIMES_API_URL,
+			apiKeyPresent: !!API_KEY,
+			apiKeyLength: API_KEY?.length || 0,
+			apiKeyMasked: API_KEY
+				? `${API_KEY.substring(0, 8)}...${API_KEY.substring(
+						API_KEY.length - 4
+				  )}`
+				: 'NOT_SET',
+			fullUrl: `${SHOWTIMES_API_URL}?key=***MASKED***`,
 		});
 
-		const response = await fetch(`${SHOWTIMES_API_URL}?key=${API_KEY}`);
-		consoleInfo('External API response status', { status: response.status });
+		const response = await fetch(fullUrl);
+		consoleInfo('External API response status', {
+			status: response.status,
+			statusText: response.statusText,
+			headers: Object.fromEntries(response.headers.entries()),
+		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
@@ -102,26 +121,7 @@ async function fetchShowtimes() {
 // Handle both GET and POST methods
 export async function GET(request: NextRequest) {
 	try {
-		// First, invoke the Supabase Edge Function
-		const supabase = createClient(
-			process.env.SUPABASE_URL!,
-			process.env.SUPABASE_ANON_KEY!
-		);
-
-		const { data: edgeFunctionData, error: edgeFunctionError } =
-			await supabase.functions.invoke('sync-movieshows', {
-				body: { name: 'Functions' },
-			});
-
-		if (edgeFunctionError) {
-			console.error('Error invoking sync-movieshows:', edgeFunctionError);
-			return NextResponse.json(
-				{ error: 'Failed to invoke sync-movieshows function' },
-				{ status: 500 }
-			);
-		}
-
-		// Continue with existing functionality
+		// Generate trace ID for tracking this sync operation
 		const traceId = crypto.randomUUID();
 		consoleInfo('Starting sync process', { traceId });
 
@@ -132,7 +132,6 @@ export async function GET(request: NextRequest) {
 			success: true,
 			message: 'Sync process started',
 			traceId,
-			edgeFunctionData,
 		});
 	} catch (error) {
 		console.error('Unexpected error:', error);
@@ -389,6 +388,40 @@ async function processSyncInBackground(traceId: string) {
 			traceId,
 		});
 
+		// Enhanced logging for skipped movies
+		if (skippedRecords.length > 0) {
+			consoleWarn(
+				`SKIPPED MOVIES - ${skippedRecords.length} movies could not be processed`,
+				{
+					traceId,
+					timestamp: new Date().toISOString(),
+				}
+			);
+
+			// Log each skipped movie with detailed reason
+			skippedRecords.forEach((movie, index) => {
+				consoleWarn(`Skipped Movie ${index + 1}`, {
+					moviepid: movie.moviepid,
+					movie_name: movie.movie_name,
+					showtime_pid: movie.showtime_pid,
+					reason: movie.reason,
+					traceId,
+				});
+			});
+
+			// Log summary of skipped movies by reason
+			const skippedByReason = skippedRecords.reduce((acc, movie) => {
+				acc[movie.reason] = (acc[movie.reason] || 0) + 1;
+				return acc;
+			}, {} as Record<string, number>);
+
+			consoleWarn('Skipped Movies Summary by Reason', {
+				breakdown: skippedByReason,
+				totalSkipped: skippedRecords.length,
+				traceId,
+			});
+		}
+
 		// Step 4: Batch insert new records
 		const results = {
 			success: 0,
@@ -444,14 +477,62 @@ async function processSyncInBackground(traceId: string) {
 					results.failed += batch.length;
 					results.errors.push(`Error inserting batch: ${insertError.message}`);
 
-					// Add failed movies to the failedList
-					batch.forEach((movie) => {
-						results.failedList.push({
+					// Enhanced logging for failed insertions
+					consoleError(
+						`BATCH INSERTION FAILED - ${batch.length} movies failed to insert`,
+						{
+							batchNumber: Math.floor(i / BATCH_SIZE) + 1,
+							errorMessage: insertError.message,
+							errorCode: insertError.code,
+							errorDetails: insertError.details,
+							traceId,
+							timestamp: new Date().toISOString(),
+						}
+					);
+
+					// Add failed movies to the failedList with detailed logging
+					batch.forEach((movie, movieIndex) => {
+						const failedMovie = {
 							moviepid: movie.moviepid,
 							movie_name: movie.movie_name,
 							showtime_pid: movie.showtime_pid,
 							error: insertError.message,
-						});
+						};
+
+						results.failedList.push(failedMovie);
+
+						// Log each failed movie individually
+						consoleError(
+							`Failed Movie ${movieIndex + 1} in Batch ${
+								Math.floor(i / BATCH_SIZE) + 1
+							}`,
+							{
+								...failedMovie,
+								cinema: movie.cinema,
+								city: movie.city,
+								day: movie.day,
+								time: movie.time,
+								traceId,
+							}
+						);
+					});
+
+					// Log the failed movies to database for persistent tracking
+					await logError(`Batch insertion failed for ${batch.length} movies`, {
+						batchNumber: Math.floor(i / BATCH_SIZE) + 1,
+						failedMovies: batch.map((movie) => ({
+							moviepid: movie.moviepid,
+							movie_name: movie.movie_name,
+							showtime_pid: movie.showtime_pid,
+							cinema: movie.cinema,
+							city: movie.city,
+						})),
+						insertError: {
+							message: insertError.message,
+							code: insertError.code,
+							details: insertError.details,
+						},
+						traceId,
 					});
 				} else {
 					results.success += batch.length;
@@ -477,7 +558,69 @@ async function processSyncInBackground(traceId: string) {
 			});
 		}
 
+		// Enhanced logging for all failed movies
+		const totalFailedMovies = results.failedList.length + skippedRecords.length;
+		if (totalFailedMovies > 0) {
+			consoleError(
+				`TOTAL FAILED MOVIES - ${totalFailedMovies} movies failed processing`,
+				{
+					insertionFailures: results.failedList.length,
+					validationFailures: skippedRecords.length,
+					traceId,
+					timestamp: new Date().toISOString(),
+				}
+			);
+
+			// Log detailed breakdown of all failed movies
+			const allFailedMovies = [
+				...results.failedList.map((movie) => ({
+					...movie,
+					failureType: 'INSERTION_FAILURE',
+					failureReason: movie.error,
+				})),
+				...skippedRecords.map((movie) => ({
+					moviepid: movie.moviepid,
+					movie_name: movie.movie_name,
+					showtime_pid: movie.showtime_pid,
+					failureType: 'VALIDATION_FAILURE',
+					failureReason: movie.reason,
+				})),
+			];
+
+			// Log comprehensive failed movies list to database
+			await logError(`Total failed movies: ${totalFailedMovies}`, {
+				summary: {
+					totalFailed: totalFailedMovies,
+					insertionFailures: results.failedList.length,
+					validationFailures: skippedRecords.length,
+				},
+				allFailedMovies,
+				traceId,
+				timestamp: new Date().toISOString(),
+			});
+
+			// Log top failing movies by name for analysis
+			const movieFailureCounts = allFailedMovies.reduce((acc, movie) => {
+				const key = `${movie.movie_name} (PID: ${movie.moviepid})`;
+				acc[key] = (acc[key] || 0) + 1;
+				return acc;
+			}, {} as Record<string, number>);
+
+			const topFailingMovies = Object.entries(movieFailureCounts)
+				.sort(([, a], [, b]) => b - a)
+				.slice(0, 10);
+
+			if (topFailingMovies.length > 0) {
+				consoleWarn('Top 10 Failing Movies', {
+					topFailingMovies,
+					traceId,
+				});
+			}
+		}
+
 		// Comprehensive final summary
+		const totalFailedMoviesForSummary =
+			results.failedList.length + skippedRecords.length;
 		const summaryData = {
 			// Main metrics
 			totalProcessed: showtimesData.length,
@@ -485,6 +628,7 @@ async function processSyncInBackground(traceId: string) {
 			alreadyExisting: results.existing,
 			failedToInsert: results.failed,
 			skippedDueToValidation: skippedRecords.length,
+			totalFailedMovies: totalFailedMoviesForSummary,
 
 			// Processing details
 			processingTime: Math.round(totalProcessingTime),
@@ -502,7 +646,30 @@ async function processSyncInBackground(traceId: string) {
 				pid: m.moviepid,
 				showtime_pid: m.showtime_pid,
 				error: m.error,
+				failureType: 'INSERTION_FAILURE',
 			})),
+
+			skippedMovies: skippedRecords.map((m) => ({
+				name: m.movie_name,
+				pid: m.moviepid,
+				showtime_pid: m.showtime_pid,
+				reason: m.reason,
+				failureType: 'VALIDATION_FAILURE',
+			})),
+
+			// Enhanced failure analysis
+			failureBreakdown: {
+				insertionFailures: results.failedList.length,
+				validationFailures: skippedRecords.length,
+				totalFailures: totalFailedMoviesForSummary,
+				failureRate:
+					totalFailedMoviesForSummary > 0
+						? (
+								(totalFailedMoviesForSummary / showtimesData.length) *
+								100
+						  ).toFixed(2) + '%'
+						: '0%',
+			},
 
 			// Summary counts
 			errorCount: results.errors.length,

@@ -1,6 +1,5 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { PostHogProvider } from './posthogProvider';
 
 export const metadata: Metadata = {
 	metadataBase: new URL('https://serets.co.il'),
@@ -42,11 +41,5 @@ export default function RootLayout({
 }: {
 	children: React.ReactNode;
 }) {
-	return (
-		<html lang="en">
-			<body>
-				<PostHogProvider>{children}</PostHogProvider>
-			</body>
-		</html>
-	);
+	return children;
 }

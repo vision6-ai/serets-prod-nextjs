@@ -175,8 +175,10 @@
 		"no_results": "No movies found matching your filters.",
 		"latestReleases": "Latest Releases",
 		"topRated": "Top Rated",
+		"comingSoon": "Coming Soon",
 		"recommendedMovies": "Recommended Movies",
-		"cast": "Cast"
+		"cast": "Cast",
+		"watchTrailer": "Watch Trailer"
 	},
 	"actors": {
 		"biography": "Biography",
@@ -246,6 +248,7 @@
 		}
 	},
 	"cities": {
+		"Afula": "Afula",
 		"Ashdod": "Ashdod",
 		"Ashkelon": "Ashkelon",
 		"Ayalon": "Ayalon",

@@ -14,18 +14,20 @@ const intlMiddleware = createMiddleware({
 const ALLOWED_EMAIL = 'yinon@vision6.ai';
 
 export async function middleware(req: NextRequest) {
-	const res = NextResponse.next();
-	const supabase = createMiddlewareClient({ req, res });
-
 	// Check if the request is for the dashboard
 	if (req.nextUrl.pathname.startsWith('/dashboard')) {
+		const res = NextResponse.next();
+		const supabase = createMiddlewareClient({ req, res });
+
 		// Skip authentication check for login page
 		if (req.nextUrl.pathname === '/dashboard/login') {
 			return res;
 		}
-		
+
 		// Check user authentication
-		const { data: { session } } = await supabase.auth.getSession();
+		const {
+			data: { session },
+		} = await supabase.auth.getSession();
 
 		// If not authenticated, redirect to login
 		if (!session) {
@@ -41,18 +43,23 @@ export async function middleware(req: NextRequest) {
 			// Sign them out and redirect to login
 			await supabase.auth.signOut();
 
-			const redirectUrl = new URL('/dashboard/login?unauthorized=true', req.url);
+			const redirectUrl = new URL(
+				'/dashboard/login?unauthorized=true',
+				req.url
+			);
 			return NextResponse.redirect(redirectUrl);
 		}
+
+		return res;
 	}
 
-	// Continue for all other requests
-	return res;
+	// Apply internationalization middleware to all other routes
+	return intlMiddleware(req);
 }
 
 export const config = {
 	matcher: [
-		// Match all dashboard routes
-		'/dashboard/:path*',
+		// Match all routes except static files, API routes, and specific assets
+		'/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|api/).*)',
 	],
 };
