@@ -2,43 +2,40 @@ import { createClient } from '@supabase/supabase-js'
 import { GenreContent } from './genre-content'
 import { notFound } from 'next/navigation'
 import type { Movie } from '@/types/movie'
+import { Database } from '@/types/supabase'
 
 export const revalidate = 3600
 
 interface Genre {
-  id: string
+  id: number
   name: string
   slug: string
 }
 
-// Define types for the data structure
-interface MovieTranslation {
-  title: string;
-  synopsis: string | null;
-  poster_url: string | null;
-  trailer_url: string | null;
-  language_code: string;
-  movie_id: string;
+// Helper function to get localized field
+function getLocalizedField(enField: string | null, heField: string | null, locale: string): string | null {
+	if (locale === 'he' && heField) return heField;
+	return enField || heField;
 }
 
 async function getGenreData(slug: string, locale: string = 'en'): Promise<{ genre: Genre; movies: Movie[] } | null> {
-  const supabase = createClient(
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
   console.log('Fetching genre:', slug)
 
-  // First get the genre with translations
+  // Get the genre by ID (slug is actually the ID)
+  const genreId = parseInt(slug)
+  if (isNaN(genreId)) {
+    return null
+  }
+
   const { data: genreData, error: genreError } = await supabase
     .from('genres')
-    .select(`
-      id, 
-      slug,
-      translations:genre_translations(name)
-    `)
-    .eq('slug', slug)
-    .eq('translations.language_code', locale)
+    .select('id, name_en, name_he')
+    .eq('id', genreId)
     .single()
 
   console.log('Genre result:', { genreData, error: genreError })
@@ -47,16 +44,10 @@ async function getGenreData(slug: string, locale: string = 'en'): Promise<{ genr
     return null
   }
 
-  // Extract the name from translations
-  const genreName = genreData.translations && 
-                    genreData.translations.length > 0 ? 
-                    genreData.translations[0].name : 
-                    genreData.slug // Fallback to slug if no translation
-
   const genre = {
     id: genreData.id,
-    name: genreName,
-    slug: genreData.slug
+    name: getLocalizedField(genreData.name_en, genreData.name_he, locale) || `Genre ${genreData.id}`,
+    slug: genreData.id.toString()
   }
 
   // Get all movie IDs for this genre
@@ -80,15 +71,13 @@ async function getGenreData(slug: string, locale: string = 'en'): Promise<{ genr
     }
   }
 
-  // Get movies basic data first
+  // Get movies with bilingual data
   const { data: moviesData, error: moviesError } = await supabase
     .from('movies')
     .select(`
-      id,
-      slug,
-      release_date,
-      duration,
-      rating
+      id, slug, release_date, runtime, vote_average,
+      title_en, title_he, overview_en, overview_he,
+      poster_path_en, poster_path_he
     `)
     .in('id', movieIds)
 
@@ -99,48 +88,18 @@ async function getGenreData(slug: string, locale: string = 'en'): Promise<{ genr
     return null
   }
 
-  // Then fetch translations separately
-  const { data: translationsData, error: translationsError } = await supabase
-    .from('movie_translations')
-    .select(`
-      title,
-      synopsis,
-      poster_url,
-      trailer_url,
-      language_code,
-      movie_id
-    `)
-    .in('movie_id', movieIds)
-    .eq('language_code', locale)
-
-  if (translationsError) {
-    console.error('Error fetching movie translations:', translationsError)
-    // Continue without translations
-  }
-
-  // Create a map of translations by movie_id for easier lookup
-  const translationsMap = new Map()
-  if (translationsData) {
-    translationsData.forEach(translation => {
-      translationsMap.set(translation.movie_id, translation)
-    })
-  }
-
   // Transform the movies data to match the expected format
   const movies = (moviesData || []).map(movie => {
-    // Get the translation for the current locale
-    const translation = translationsMap.get(movie.id);
-    
     return {
       id: movie.id,
-      title: translation?.title || movie.slug,
-      hebrew_title: translation?.title || movie.slug, // Using same title as fallback
-      synopsis: translation?.synopsis || null,
+      title: getLocalizedField(movie.title_en, movie.title_he, locale) || movie.slug,
+      hebrew_title: movie.title_he || movie.title_en || movie.slug,
+      synopsis: getLocalizedField(movie.overview_en, movie.overview_he, locale),
       release_date: movie.release_date,
-      duration: movie.duration,
-      rating: movie.rating,
-      poster_url: translation?.poster_url || null,
-      trailer_url: translation?.trailer_url || null,
+      duration: movie.runtime,
+      rating: movie.vote_average,
+      poster_url: getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale),
+      trailer_url: null, // Will be populated from movie_videos if needed
       slug: movie.slug,
     }
   })

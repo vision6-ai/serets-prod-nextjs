@@ -24,20 +24,22 @@ import { cn } from '@/lib/utils'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import useSWR from 'swr'
 import { Genre, Theater } from '@/types/shared'
+import { Database } from '@/types/supabase'
+
+// Helper function to get localized field
+const getLocalizedField = (enField: string | null, heField: string | null, locale: string): string | null => {
+  if (locale === 'he' && heField) return heField;
+  return enField || heField;
+};
 
 // Fetch functions
-const fetchCategories = async (): Promise<Genre[]> => {
+const fetchCategories = async (locale: string = 'en'): Promise<Genre[]> => {
   try {
-    const client = createClientComponentClient()
+    const client = createClientComponentClient<Database>()
     const { data, error } = await client
       .from('genres')
-      .select(`
-        id, 
-        slug,
-        translations:genre_translations(name)
-      `)
-      .eq('translations.language_code', 'en')
-      .order('slug')
+      .select('id, name_en, name_he')
+      .order('name_en')
     
     if (error) {
       console.error('Error fetching categories:', error.message)
@@ -46,11 +48,9 @@ const fetchCategories = async (): Promise<Genre[]> => {
     
     // Transform the data to match the expected format
     const transformedData = data?.map(genre => ({
-      id: genre.id,
-      slug: genre.slug,
-      name: genre.translations && genre.translations.length > 0 
-        ? genre.translations[0].name 
-        : genre.slug // Fallback to slug if no translation
+      id: genre.id.toString(),
+      slug: genre.id.toString(),
+      name: getLocalizedField(genre.name_en, genre.name_he, locale) || `Genre ${genre.id}`
     })) as Genre[] || []
     
     return transformedData
@@ -60,12 +60,12 @@ const fetchCategories = async (): Promise<Genre[]> => {
   }
 }
 
-const fetchTheaters = async () => {
+const fetchTheaters = async (locale: string = 'en') => {
   try {
-    const client = createClientComponentClient()
+    const client = createClientComponentClient<Database>()
     const { data, error } = await client
       .from('theaters')
-      .select('id, name, location, slug')
+      .select('id, name, name_he, location, city')
       .order('name')
     
     if (error) {
@@ -73,7 +73,15 @@ const fetchTheaters = async () => {
       return []
     }
     
-    return data || []
+    // Transform the data to match the expected format
+    const transformedData = data?.map(theater => ({
+      id: theater.id.toString(),
+      name: getLocalizedField(theater.name, theater.name_he, locale) || theater.name,
+      location: theater.location || theater.city,
+      slug: theater.name // Using name as slug since theaters table doesn't have slug
+    })) || []
+    
+    return transformedData
   } catch (error) {
     console.error('Exception fetching theaters:', error)
     return []
@@ -99,7 +107,7 @@ export default function Header() {
   const isRtl = locale === 'he'
 
   // Fetch data with SWR
-  const { data: categories = [], error: categoriesError } = useSWR<Genre[]>('categories', fetchCategories)
+  const { data: categories = [], error: categoriesError } = useSWR<Genre[]>(['categories', locale], () => fetchCategories(locale))
   
   useEffect(() => {
     if (categoriesError) {
@@ -107,7 +115,7 @@ export default function Header() {
     }
   }, [categoriesError])
   
-  const { data: theaters = [] } = useSWR<Theater[]>('theaters', fetchTheaters)
+  const { data: theaters = [] } = useSWR<Theater[]>(['theaters', locale], () => fetchTheaters(locale))
 
   useEffect(() => {
     setMounted(true)

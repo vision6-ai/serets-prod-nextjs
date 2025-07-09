@@ -7,6 +7,12 @@ import { MovieFilters } from '@/components/movies/movie-filters';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Locale } from '@/config/i18n';
 
+// Helper function to get localized field
+const getLocalizedField = (enField: string | null, heField: string | null, locale: string): string | null => {
+	if (locale === 'he' && heField) return heField;
+	return enField || heField;
+};
+
 interface Movie {
 	id: string;
 	title: string;
@@ -93,9 +99,9 @@ export function MoviesContent({
 				console.log('Current datetime (now):', now);
 
 				// Get all movies that have showtimes after the current date
-				// First, get movie IDs from movieshows with future dates
+				// First, get movie IDs from showtimes with future dates
 				const { data: upcomingShowtimes, error: showtimesError } =
-					await supabase.from('movieshows').select('moviepid').gt('day', now);
+					await supabase.from('showtimes').select('moviepid').gt('day', now);
 
 				console.log('Upcoming showtimes query result:', upcomingShowtimes);
 				if (showtimesError) {
@@ -189,58 +195,19 @@ export function MoviesContent({
 
 										if (!finalMovieData) return null;
 
-										// Get translations for this movie
-										const { data: translations } = await supabase
-											.from('movie_translations')
-											.select(
-												'title, synopsis, poster_url, trailer_url, language_code, movie_id'
-											)
-											.eq('movie_id', finalMovieData.id)
-											.eq('language_code', locale)
-											.single();
-
-										// If no translation in requested locale, try to get English translation
-										if (!translations) {
-											const { data: enTranslations } = await supabase
-												.from('movie_translations')
-												.select(
-													'title, synopsis, poster_url, trailer_url, language_code, movie_id'
-												)
-												.eq('movie_id', finalMovieData.id)
-												.eq('language_code', 'en')
-												.single();
-
-											return {
-												...finalMovieData,
-												title:
-													enTranslations?.title ||
-													finalMovieData.title ||
-													theaterMovie.original_title,
-												hebrew_title:
-													locale === 'he'
-														? enTranslations?.title
-														: finalMovieData.hebrew_title,
-												synopsis:
-													enTranslations?.synopsis || finalMovieData.synopsis,
-												poster_url: enTranslations?.poster_url || null,
-												screenings_count: theaterMovie.screenings_count,
-											};
-										}
-
-										// Return movie with translations
+										// Use bilingual columns directly from finalMovieData
 										return {
 											...finalMovieData,
 											title:
-												translations.title ||
+												getLocalizedField(finalMovieData.title_en, finalMovieData.title_he, locale) ||
 												finalMovieData.title ||
 												theaterMovie.original_title,
 											hebrew_title:
-												locale === 'he'
-													? translations.title
-													: finalMovieData.hebrew_title,
+												finalMovieData.title_he || finalMovieData.title_en,
 											synopsis:
-												translations.synopsis || finalMovieData.synopsis,
-											poster_url: translations.poster_url || null,
+												getLocalizedField(finalMovieData.synopsis_en, finalMovieData.synopsis_he, locale) ||
+												finalMovieData.synopsis,
+											poster_url: finalMovieData.poster_url,
 											screenings_count: theaterMovie.screenings_count,
 										};
 									}
@@ -345,26 +312,9 @@ export function MoviesContent({
 
 				// Apply search query if provided
 				if (query && query.trim() !== '') {
-					// First get movies with matching titles from translations
-					const { data: translationMatches, error: searchError } =
-						await supabase
-							.from('movie_translations')
-							.select('movie_id')
-							.ilike('title', `%${query}%`);
-
-					if (searchError) {
-						console.error('Error searching for movies:', searchError);
-					}
-
-					if (translationMatches && translationMatches.length > 0) {
-						const movieIds = translationMatches.map((match) => match.movie_id);
-						movieQuery = movieQuery.in('id', movieIds);
-					} else if (query.trim() !== '') {
-						// Only return empty results if there was a non-empty search with no matches
-						// If search is empty, continue with other filters
-						setMovies([]);
-						setLoading(false);
-						return;
+					// Search in bilingual title columns directly
+					if (query.trim() !== '') {
+						movieQuery = movieQuery.or(`title_en.ilike.%${query}%,title_he.ilike.%${query}%`);
 					}
 				}
 
@@ -372,7 +322,7 @@ export function MoviesContent({
 				if (city) {
 					// Get movie IDs that have showtimes in the selected city
 					const { data: cityMovies, error: cityError } = await supabase
-						.from('movieshows')
+						.from('showtimes')
 						.select('moviepid')
 						.eq('city', city)
 						.order('moviepid');
@@ -447,58 +397,16 @@ export function MoviesContent({
 					JSON.stringify(filters) === JSON.stringify(currentFilters.current)
 				) {
 					// Get translations for the movies
-					const moviesWithTranslations = await Promise.all(
-						(data || []).map(async (movie) => {
-							// Get translations for this movie - explicitly select all needed fields
-							const { data: translations } = await supabase
-								.from('movie_translations')
-								.select(
-									'title, synopsis, poster_url, trailer_url, language_code, movie_id'
-								)
-								.eq('movie_id', movie.id)
-								.eq('language_code', locale)
-								.single();
-
-							// If no translation in requested locale, try to get English translation
-							if (!translations) {
-								const { data: enTranslations } = await supabase
-									.from('movie_translations')
-									.select(
-										'title, synopsis, poster_url, trailer_url, language_code, movie_id'
-									)
-									.eq('movie_id', movie.id)
-									.eq('language_code', 'en')
-									.single();
-
-								console.log(
-									`Movie ${movie.id} English translations:`,
-									enTranslations
-								);
-
-								// Make sure we're explicitly assigning the poster_url
-								return {
-									...movie,
-									title: enTranslations?.title || movie.title,
-									hebrew_title:
-										locale === 'he'
-											? enTranslations?.title
-											: movie.hebrew_title,
-									synopsis: enTranslations?.synopsis || movie.synopsis,
-									poster_url: enTranslations?.poster_url || null,
-								};
-							}
-
-							// Return movie with translations - make sure we're explicitly assigning the poster_url
-							return {
-								...movie,
-								title: translations.title || movie.title,
-								hebrew_title:
-									locale === 'he' ? translations.title : movie.hebrew_title,
-								synopsis: translations.synopsis || movie.synopsis,
-								poster_url: translations.poster_url || null,
-							};
-						})
-					);
+					const moviesWithTranslations = (data || []).map((movie) => {
+						// Use bilingual columns directly from movie data
+						return {
+							...movie,
+							title: getLocalizedField(movie.title_en, movie.title_he, locale) || movie.title,
+							hebrew_title: movie.title_he || movie.title_en,
+							synopsis: getLocalizedField(movie.synopsis_en, movie.synopsis_he, locale) || movie.synopsis,
+							poster_url: movie.poster_url,
+						};
+					});
 
 					console.log('Movies with translations:', moviesWithTranslations);
 					setMovies(moviesWithTranslations || []);

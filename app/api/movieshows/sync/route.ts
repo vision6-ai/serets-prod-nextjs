@@ -257,7 +257,7 @@ async function processSyncInBackground(traceId: string) {
 
 		// Get both movieshows and movies for proper validation
 		const { data: existingMovieshows, error: fetchError } = await supabaseAdmin
-			.from('movieshows')
+			.from('showtimes')
 			.select('showtime_pid, moviepid')
 			.order('moviepid');
 
@@ -470,7 +470,7 @@ async function processSyncInBackground(traceId: string) {
 
 				// Use regular insert since there's no unique constraint on showtime_pid
 				const { error: insertError } = await supabaseAdmin
-					.from('movieshows')
+					.from('showtimes')
 					.insert(batch);
 
 				if (insertError) {

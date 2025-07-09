@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
 			const startTime = performance.now();
 			const { data: movieshows, error } = await supabaseAdmin
-				.from('movieshows')
+				.from('showtimes')
 				.select('*')
 				.eq('moviepid', moviepid)
 				.eq('city', city)
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 
 			const startTime = performance.now();
 			const { data: cities, error } = await supabaseAdmin
-				.from('movieshows')
+				.from('showtimes')
 				.select('city')
 				.eq('moviepid', moviepid)
 				.order('city');

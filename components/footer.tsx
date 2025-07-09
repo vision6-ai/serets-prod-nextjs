@@ -5,52 +5,41 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Genre } from '@/types/shared'
+import { Database } from '@/types/supabase'
 
 export default function Footer({ locale = 'en' }: { locale?: string }) {
   const t = useTranslations('footer')
   const [categories, setCategories] = useState<Genre[]>([])
   
-  // Fetch genre categories with translations
+  // Helper function to get localized field
+  const getLocalizedField = (enField: string | null, heField: string | null): string | null => {
+    if (locale === 'he' && heField) return heField;
+    return enField || heField;
+  };
+
+  // Fetch genre categories with bilingual data
   useEffect(() => {
     const fetchGenres = async () => {
-      const supabase = createClientComponentClient()
+      const supabase = createClientComponentClient<Database>()
       try {
-        // First get all genres
+        // Get genres with bilingual data
         const { data: genresData, error: genresError } = await supabase
           .from('genres')
-          .select('id, slug')
-          .order('slug')
+          .select('id, name_en, name_he')
+          .order('name_en')
+          .limit(6) // Limit to 6 genres for footer
           
         if (genresError) {
           console.error('Error fetching genres:', genresError)
           return
         }
         
-        // Then get translations for current locale
-        const { data: translations, error: translationsError } = await supabase
-          .from('genre_translations')
-          .select('genre_id, name')
-          .eq('language_code', locale)
-          .in('genre_id', genresData.map(g => g.id))
-          
-        if (translationsError) {
-          console.error('Error fetching genre translations:', translationsError)
-        }
-        
-        // Create a translation map
-        const translationMap = new Map()
-        translations?.forEach(trans => {
-          translationMap.set(trans.genre_id, trans.name)
-        })
-        
-        // Transform genres data with translations
-        const transformedGenres = genresData
-          .map(genre => ({
-            id: genre.id,
-            slug: genre.slug,
-            name: translationMap.get(genre.id) || genre.slug // Fall back to slug if no translation
-          }))
-          .slice(0, 6) // Limit to 6 genres for footer
+        // Transform genres data with localized names
+        const transformedGenres = genresData.map(genre => ({
+          id: genre.id.toString(),
+          slug: genre.id.toString(),
+          name: getLocalizedField(genre.name_en, genre.name_he) || `Genre ${genre.id}`
+        }))
           
         setCategories(transformedGenres)
       } catch (error) {

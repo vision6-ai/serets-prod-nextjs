@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
 		// Get latest movieshows count
 		const { count: totalMovieshows, error: countError } = await supabaseAdmin
-			.from('movieshows')
+			.from('showtimes')
 			.select('*', { count: 'exact', head: true });
 
 		if (countError) {

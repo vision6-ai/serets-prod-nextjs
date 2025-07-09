@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { Database } from '@/types/supabase';
 
 // Cache for database results
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 	}
 
 	try {
-		const supabase = createRouteHandlerClient({ cookies });
+		const supabase = createRouteHandlerClient<Database>({ cookies });
 
 		switch (type) {
 			case 'cities':
@@ -85,7 +86,7 @@ async function getCities(supabase: any) {
 
 			while (hasMore) {
 				const { data: batchData, error: batchError } = await supabase
-					.from('movieshows')
+					.from('showtimes')
 					.select('city')
 					.not('city', 'is', null)
 					.range(offset, offset + limit - 1)
@@ -157,7 +158,7 @@ async function getCities(supabase: any) {
 
 		while (hasMore) {
 			const { data: batchData, error: batchError } = await supabase
-				.from('movieshows')
+				.from('showtimes')
 				.select('city')
 				.not('city', 'is', null)
 				.range(offset, offset + limit - 1)
@@ -226,9 +227,9 @@ async function getSearchSuggestions(supabase: any, query: string) {
 
 		// Get unique movie names and theaters efficiently
 		const { data, error } = await supabase
-			.from('movieshows')
-			.select('movie_name, theater_name')
-			.or(`movie_name.ilike.${searchTerm},theater_name.ilike.${searchTerm}`)
+			.from('showtimes')
+			.select('movie_name, cinema')
+			.or(`movie_name.ilike.${searchTerm},cinema.ilike.${searchTerm}`)
 			.limit(20); // Fetch more to get good unique results
 
 		if (error) {
@@ -247,10 +248,10 @@ async function getSearchSuggestions(supabase: any, query: string) {
 				movieNames.add(item.movie_name);
 			}
 			if (
-				item.theater_name &&
-				item.theater_name.toLowerCase().includes(query.toLowerCase())
+				item.cinema &&
+				item.cinema.toLowerCase().includes(query.toLowerCase())
 			) {
-				theaterNames.add(item.theater_name);
+				theaterNames.add(item.cinema);
 			}
 		});
 
@@ -284,7 +285,7 @@ async function getSearchSuggestions(supabase: any, query: string) {
 // Optional: Create the database function for better performance
 export async function POST(request: NextRequest) {
 	try {
-		const supabase = createRouteHandlerClient({ cookies });
+		const supabase = createRouteHandlerClient<Database>({ cookies });
 
 		// Create the RPC function if it doesn't exist
 		const { error } = await supabase.rpc('exec_sql', {
@@ -293,10 +294,10 @@ export async function POST(request: NextRequest) {
 				RETURNS TABLE(city TEXT) AS $$
 				BEGIN
 					RETURN QUERY
-					SELECT DISTINCT movieshows.city
-					FROM movieshows
-					WHERE movieshows.city IS NOT NULL
-					ORDER BY movieshows.city;
+					SELECT DISTINCT showtimes.city
+					FROM showtimes
+					WHERE showtimes.city IS NOT NULL
+					ORDER BY showtimes.city;
 				END;
 				$$ LANGUAGE plpgsql;
 			`,

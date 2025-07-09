@@ -1,8 +1,7 @@
 import { MovieContent } from '@/components/movies/movie-content';
 import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
-import { getActorTranslations, getGenreTranslations } from '@/lib/translations';
-import { Database } from '@/types/supabase-types';
+import { Database } from '@/types/supabase';
 import { Locale } from '@/config/i18n';
 import { unstable_setRequestLocale } from 'next-intl/server';
 import type { Movie } from '@/types/movie';
@@ -10,39 +9,10 @@ import { getRecommendedMovies } from '@/lib/recommendations';
 
 export const revalidate = 3600;
 
-// Define types for the data structure
-interface MovieTranslation {
-	title: string;
-	synopsis: string | null;
-	poster_url: string | null;
-	trailer_url: string | null;
-	language_code: string;
-	movie_id: string;
-}
-
-interface GenreTranslation {
-	name: string;
-	language_code: string;
-	genre_id: string;
-}
-
-interface Actor {
-	id: string;
-	slug: string;
-	birth_date: string | null;
-	birth_place: string | null;
-	photo_url: string | null;
-}
-
-interface Genre {
-	id: string;
-	slug: string;
-}
-
-interface Award {
-	id: string;
-	name: string;
-	hebrew_name: string | null;
+// Helper function to get localized field
+function getLocalizedField(enField: string | null, heField: string | null, locale: Locale): string | null {
+	if (locale === 'he' && heField) return heField;
+	return enField || heField;
 }
 
 async function getMovieData(slug: string, locale: Locale) {
@@ -51,53 +21,112 @@ async function getMovieData(slug: string, locale: Locale) {
 		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 	);
 
-	// Fetch the movie data
-	const { data: movie, error: movieError } = await supabase
+	// Fetch the movie data with bilingual fields
+	// Try to find by slug first, then fall back to other identifiers
+	let { data: movie, error: movieError } = await supabase
 		.from('movies')
-		.select('id, slug, release_date, duration, rating, countit_pid')
+		.select(`
+			id, slug, release_date, runtime, vote_average, countit_pid,
+			title_en, title_he, overview_en, overview_he,
+			poster_path_en, poster_path_he, backdrop_path,
+			tagline_en, tagline_he, israeli_release_date
+		`)
 		.eq('slug', slug)
 		.single();
+
+	// If slug lookup failed, try other identifiers
+	if (movieError && movieError.code === 'PGRST116') {
+		console.log('Movie not found by slug, trying other identifiers...');
+		
+		// Try to find by countit_pid (if slug looks like a PID)
+		const { data: movieByPid, error: pidError } = await supabase
+			.from('movies')
+			.select(`
+				id, slug, release_date, runtime, vote_average, countit_pid,
+				title_en, title_he, overview_en, overview_he,
+				poster_path_en, poster_path_he, backdrop_path,
+				tagline_en, tagline_he, israeli_release_date
+			`)
+			.eq('countit_pid', slug)
+			.single();
+
+		if (!pidError && movieByPid) {
+			movie = movieByPid;
+			movieError = null;
+		} else {
+			// Try to find by ID (if slug is numeric)
+			const numericId = parseInt(slug);
+			if (!isNaN(numericId)) {
+				const { data: movieById, error: idError } = await supabase
+					.from('movies')
+					.select(`
+						id, slug, release_date, runtime, vote_average, countit_pid,
+						title_en, title_he, overview_en, overview_he,
+						poster_path_en, poster_path_he, backdrop_path,
+						tagline_en, tagline_he, israeli_release_date
+					`)
+					.eq('id', numericId)
+					.single();
+
+				if (!idError && movieById) {
+					movie = movieById;
+					movieError = null;
+				}
+			}
+		}
+	}
 
 	if (movieError || !movie) {
 		console.error('Error fetching movie:', movieError);
 		return null;
 	}
 
-	// Store the countit_pid
-	const countitPid = movie.countit_pid;
-	console.log('Fetched countit_pid:', countitPid);
+	// Fetch additional data in parallel
+	const [videosRes, castRes, movieGenresRes] = await Promise.all([
+		supabase.from('movie_videos').select('*').eq('movie_id', movie.id),
 
-	// Continue with fetching translations and other data
-	const { data: translations, error: translationError } = await supabase
-		.from('movie_translations')
-		.select('title, synopsis, poster_url, trailer_url, language_code')
-		.eq('movie_id', movie.id)
-		.eq('language_code', locale);
+		supabase
+			.from('movie_credits')
+			.select(`
+				id, character_name, credit_order, credit_type,
+				person_id,
+				people:people!inner(
+					id, name_en, name_he, profile_path, slug
+				)
+			`)
+			.eq('movie_id', movie.id)
+			.eq('credit_type', 'cast')
+			.order('credit_order', { ascending: true }),
 
-	if (translationError || !translations) {
-		console.error('Error fetching translations:', translationError);
-		return null;
-	}
+		supabase
+			.from('movie_genres')
+			.select(`
+				genre_id,
+				genres:genres!inner(
+					id, name_en, name_he
+				)
+			`)
+			.eq('movie_id', movie.id),
+	]);
 
-	// Extract translation data
-	const translation =
-		translations && translations.length > 0
-			? (translations[0] as MovieTranslation)
-			: null;
+	// Find main trailer from videos
+	const mainTrailer = videosRes.data?.find(video => 
+		video.video_type === 'Trailer' && video.official === true
+	) || videosRes.data?.[0];
 
-	// Combine movie data with translations
+	// Create movie with localized fields
 	const movieWithTranslations = {
 		id: movie.id,
 		slug: movie.slug,
-		release_date: movie.release_date,
-		duration: movie.duration,
-		rating: movie.rating,
-		title: translation?.title || movie.slug,
-		hebrew_title: translation?.title || movie.slug, // Using same title as fallback
-		synopsis: translation?.synopsis || null,
-		poster_url: translation?.poster_url || null,
-		backdrop_url: null, // Required by MovieContent but not in our data
-		trailer_url: translation?.trailer_url || null,
+		release_date: movie.release_date || movie.israeli_release_date,
+		duration: movie.runtime,
+		rating: movie.vote_average,
+		title: getLocalizedField(movie.title_en, movie.title_he, locale) || movie.slug,
+		hebrew_title: movie.title_he || movie.title_en || movie.slug,
+		synopsis: getLocalizedField(movie.overview_en, movie.overview_he, locale),
+		poster_url: getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale),
+		backdrop_url: movie.backdrop_path,
+		trailer_url: mainTrailer ? `https://www.youtube.com/watch?v=${mainTrailer.video_key}` : null,
 		countit_pid: movie.countit_pid,
 	} as Movie & {
 		poster_url: string | null;
@@ -105,159 +134,48 @@ async function getMovieData(slug: string, locale: Locale) {
 		trailer_url: string | null;
 	};
 
-	// Fetch additional data in parallel
-	const [videosRes, castRes, movieGenresRes, awardsRes] = await Promise.all([
-		supabase.from('movie_videos').select('*').eq('movie_id', movie.id),
-
-		supabase
-			.from('movie_actors')
-			.select('movie_id, actor_id, role, order')
-			.eq('movie_id', movie.id)
-			.order('order', { ascending: true }),
-
-		supabase
-			.from('movie_genres')
-			.select('id, genre_id')
-			.eq('movie_id', movie.id),
-
-		supabase
-			.from('movie_awards')
-			.select('id, year, award_id, category, is_winner')
-			.eq('movie_id', movie.id)
-			.order('year', { ascending: false }),
-	]);
-
-	// Fetch actors data
-	const actorIds = (castRes.data || []).map((item) => item.actor_id);
-	const { data: actorsData } = await supabase
-		.from('actors')
-		.select('id, slug, birth_date, birth_place, photo_url')
-		.in('id', actorIds);
-
-	// Create a map of actors
-	const actorsMap = new Map();
-	actorsData?.forEach((actor) => {
-		actorsMap.set(actor.id, actor);
-	});
-
-	// Fetch actor translations
-	const { data: actorTranslations } = await supabase
-		.from('actor_translations')
-		.select('actor_id, name, language_code')
-		.in('actor_id', actorIds)
-		.eq('language_code', locale);
-
-	// Create a map of actor translations
-	const actorTranslationsMap = new Map();
-	actorTranslations?.forEach((translation) => {
-		actorTranslationsMap.set(translation.actor_id, translation);
-	});
-
-	// Process cast data
+	// Process cast data (already includes people data from join)
 	const cast = (castRes.data || [])
-		.map((castMember) => {
-			const actorData = actorsMap.get(castMember.actor_id);
-			const actorTranslation = actorTranslationsMap.get(castMember.actor_id);
-
-			if (!actorData) return null;
+		.map((castMember: any) => {
+			const person = castMember.people;
+			if (!person) return null;
 
 			return {
-				id: castMember.actor_id,
-				role: castMember.role,
-				order: castMember.order,
-				character_name: null, // This field doesn't exist in movie_actors
+				id: castMember.person_id,
+				role: castMember.character_name,
+				order: castMember.credit_order || 999,
+				character_name: castMember.character_name,
 				actor: {
-					id: actorData.id,
-					name: actorTranslation?.name || actorData.slug,
-					slug: actorData.slug,
-					birth_date: actorData.birth_date,
-					birth_place: actorData.birth_place,
-					photo_url: actorData.photo_url,
+					id: person.id,
+					name: getLocalizedField(person.name_en, person.name_he, locale) || person.slug,
+					slug: person.slug,
+					birth_date: null, // Not available in this query
+					birth_place: null, // Not available in this query
+					photo_url: person.profile_path,
 				},
 			};
 		})
 		.filter(Boolean);
 
-	// Fetch genres data
-	const genreIds = (movieGenresRes.data || []).map((item) => item.genre_id);
-	const { data: genresData } = await supabase
-		.from('genres')
-		.select('id, slug')
-		.in('id', genreIds);
-
-	// Create a map of genres
-	const genresMap = new Map();
-	genresData?.forEach((genre) => {
-		genresMap.set(genre.id, genre);
-	});
-
-	// Fetch genre translations
-	const { data: genreTranslations } = await supabase
-		.from('genre_translations')
-		.select('genre_id, name, language_code')
-		.in('genre_id', genreIds)
-		.eq('language_code', locale);
-
-	// Create a map of genre translations
-	const genreTranslationsMap = new Map();
-	genreTranslations?.forEach((translation) => {
-		genreTranslationsMap.set(translation.genre_id, translation);
-	});
-
-	// Process genres data
+	// Process genres data (already includes genres data from join)
 	const genres = (movieGenresRes.data || [])
-		.map((genreData) => {
-			const genre = genresMap.get(genreData.genre_id);
-			const genreTranslation = genreTranslationsMap.get(genreData.genre_id);
-
+		.map((genreData: any) => {
+			const genre = genreData.genres;
 			if (!genre) return null;
 
 			return {
-				id: genreData.id,
+				id: genreData.genre_id,
 				genre: {
 					id: genre.id,
-					name: genreTranslation?.name || genre.slug,
-					slug: genre.slug,
+					name: getLocalizedField(genre.name_en, genre.name_he, locale) || `Genre ${genre.id}`,
+					slug: genre.id.toString(), // Using id as slug since we don't have slug in genres table
 				},
 			};
 		})
 		.filter(Boolean);
 
-	// Fetch awards data
-	const awardIds = (awardsRes.data || []).map((item) => item.award_id);
-	const { data: awardsData } = await supabase
-		.from('awards')
-		.select('id, name, hebrew_name')
-		.in('id', awardIds);
-
-	// Create a map of awards
-	const awardsMap = new Map();
-	awardsData?.forEach((award) => {
-		awardsMap.set(award.id, award);
-	});
-
-	// Process awards data
-	const awards = (awardsRes.data || [])
-		.map((award) => {
-			const awardInfo = awardsMap.get(award.award_id);
-
-			if (!awardInfo) return null;
-
-			return {
-				id: award.id,
-				year: award.year,
-				category: award.category,
-				is_winner: award.is_winner,
-				award: {
-					id: awardInfo.id,
-					name:
-						locale === 'he' && awardInfo.hebrew_name
-							? awardInfo.hebrew_name
-							: awardInfo.name,
-				},
-			};
-		})
-		.filter(Boolean);
+	// Awards functionality removed - table doesn't exist in current schema
+	const awards: any[] = [];
 
 	// Fetch recommended movies 
 	const recommendedMovies = await getRecommendedMovies(movie.id, locale, 10);
@@ -278,16 +196,10 @@ async function getMovieData(slug: string, locale: Locale) {
 		genres: genres.filter(Boolean).map((item) => ({
 			id: item!.id,
 			name: item!.genre.name,
-			hebrew_name: null, // We don't have this field yet
+			hebrew_name: null, // We'll add this when we have separate he/en fields
 			slug: item!.genre.slug,
 		})),
-		awards: awards.filter(Boolean).map((item) => ({
-			id: item!.id,
-			name: item!.award.name,
-			category: item!.category,
-			year: Number(item!.year),
-			is_winner: Boolean(item!.is_winner),
-		})),
+		awards: awards, // Empty array for now
 		similarMovies: recommendedMovies,
 	};
 }

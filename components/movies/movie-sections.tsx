@@ -54,45 +54,20 @@ async function getMoviesData(locale: string = 'en') {
 			};
 		}
 
-		// Fetch genre translations
-		const { data: genreTranslations, error: genreTranslationsError } =
-			await supabase
-				.from('genre_translations')
-				.select('genre_id, name')
-				.eq('language_code', locale);
-
-		if (genreTranslationsError) {
-			console.error(
-				'Error fetching genre translations:',
-				genreTranslationsError
-			);
-			return {
-				latest: [],
-				topRated: [],
-				comingSoon: [],
-				genres: [],
-				genreMovies: {},
-			};
-		}
-
-		// Create a map of genre translations
-		const genreTranslationsMap = new Map();
-		genreTranslations?.forEach((translation) => {
-			genreTranslationsMap.set(translation.genre_id, translation.name);
-		});
+		// No separate genre translations table - data is already bilingual in genres table
 
 		// Transform genres data
 		const genres =
 			genresData?.map((genre) => ({
 				id: genre.id,
-				slug: genre.slug,
-				name: genreTranslationsMap.get(genre.id) || genre.slug, // Fallback to slug if no translation
+				slug: genre.id.toString(),
+				name: getLocalizedField(genre.name_en, genre.name_he, locale) || `Genre ${genre.id}`
 			})) || [];
 
 		// Fetch latest movies (last 6 months)
 		const { data: latestMovies, error: latestError } = await supabase
 			.from('movies')
-			.select('id, slug, release_date, rating')
+			.select('id, slug, release_date, vote_average')
 			.lt('release_date', now)
 			.gt(
 				'release_date',
@@ -115,10 +90,10 @@ async function getMoviesData(locale: string = 'en') {
 		// Fetch top rated movies
 		const { data: topRatedMovies, error: topRatedError } = await supabase
 			.from('movies')
-			.select('id, slug, release_date, rating')
+			.select('id, slug, release_date, vote_average')
 			.lt('release_date', now)
-			.gt('rating', 7)
-			.order('rating', { ascending: false })
+			.gt('vote_average', 7)
+			.order('vote_average', { ascending: false })
 			.limit(10);
 
 		if (topRatedError) {
@@ -135,7 +110,7 @@ async function getMoviesData(locale: string = 'en') {
 		// Fetch coming soon movies (release date in the future)
 		const { data: comingSoonMovies, error: comingSoonError } = await supabase
 			.from('movies')
-			.select('id, slug, release_date, rating')
+			.select('id, slug, release_date, vote_average')
 			.gt('release_date', now)
 			.order('release_date', { ascending: true })
 			.limit(10);
