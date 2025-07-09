@@ -8,7 +8,7 @@ import { TicketBooking } from '.';
 import type { Movie } from '@/types/movie';
 import { Locale } from '@/config/i18n';
 import { useTranslations } from 'next-intl';
-import { getLocalizedField, formatTmdbImageUrl } from '@/utils/localization';
+import MovieAffiliateWebsite from '@/components/ui/movie-affiliate-website';
 
 interface MovieContentProps {
 	movie: Movie & {
@@ -70,117 +70,93 @@ export function MovieContent({
 		} similarMovies/recommendations`
 	);
 
+	// Transform data for MovieAffiliateWebsite
+	const transformedMovie = {
+		id: parseInt(movie.id),
+		title: movie.title,
+		title_he: movie.hebrew_title,
+		poster_path_en: movie.poster_url,
+		poster_path_he: movie.poster_url, // Using the same URL for both languages
+		backdrop_path: movie.backdrop_url || '/placeholder-backdrop.jpg',
+		overview: movie.synopsis || '',
+		overview_he: movie.synopsis || '', // You can add Hebrew synopsis if available
+		release_date: movie.release_date || '',
+		vote_average: movie.rating || 0,
+		runtime: movie.duration || 0,
+		trailer_url: trailer?.url || movie.trailer_url,
+		videos: videos.map(video => ({
+			id: video.id,
+			name: video.title || '',
+			name_he: video.title || '', // Add Hebrew title if available
+			key: video.id,
+			type: video.type as 'Trailer' | 'Teaser' | 'Clip' | 'Behind the Scenes',
+			thumbnail: movie.poster_url || '/placeholder-poster.jpg',
+			duration: 180 // Default duration in seconds
+		})),
+		cast: cast.map(member => ({
+			id: parseInt(member.id),
+			name: member.name,
+			name_he: member.hebrew_name,
+			character: member.role || '',
+			character_he: member.role || '', // Add Hebrew character name if available
+			profile_path: member.photo_url || '/placeholder-avatar.jpg',
+			order: member.order || 0
+		})),
+		keywords: genres.map(genre => ({
+			id: parseInt(genre.id),
+			name: genre.name,
+			name_he: genre.hebrew_name
+		}))
+	};
+
+	// Transform recommended movies
+	const transformedRecommendedMovies = similarMovies.map(similarMovie => ({
+		id: parseInt(similarMovie.id),
+		title: similarMovie.title,
+		title_he: similarMovie.hebrew_title,
+		poster_path: similarMovie.poster_url || '/placeholder-poster.jpg',
+		backdrop_path: '/placeholder-backdrop.jpg',
+		vote_average: similarMovie.rating || 0,
+		release_date: similarMovie.release_date || '',
+		genre: 'Movie' // Default genre
+	}));
+
+	// Create default showtimes data
+	const defaultShowtimes = {
+		theaters: [
+			{
+				id: 1,
+				name: "Cinema City",
+				name_he: "סינמה סיטי",
+				logo: "🎬",
+				distance: 2.5,
+				showtimes: ["14:30", "17:00", "20:30", "23:00"],
+				availability: 85
+			},
+			{
+				id: 2,
+				name: "Yes Planet",
+				name_he: "יס פלאנט",
+				logo: "🎭",
+				distance: 8.2,
+				showtimes: ["15:00", "18:15", "21:45"],
+				availability: 92
+			}
+		],
+		dates: [
+			new Date(),
+			new Date(Date.now() + 86400000),
+			new Date(Date.now() + 172800000),
+			new Date(Date.now() + 259200000),
+			new Date(Date.now() + 345600000)
+		]
+	};
+
 	return (
-		<div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
-			{/* Movie Header */}
-			<div className="flex flex-col md:flex-row gap-8 mb-12">
-				{/* Poster */}
-				<div className="w-full md:w-1/3 lg:w-1/4">
-					<div className="aspect-[2/3] relative overflow-hidden rounded-lg">
-						<img
-							src={movie.poster_url || '/placeholder-poster.jpg'}
-							alt={movie.title}
-							className="object-cover w-full h-full"
-						/>
-					</div>
-				</div>
-
-				{/* Movie Info */}
-				<div className="flex-1">
-					<h1 className="text-4xl font-bold mb-2">{movie.title}</h1>
-					{movie.hebrew_title && (
-						<h2 className="text-2xl text-muted-foreground mb-6">
-							{movie.hebrew_title}
-						</h2>
-					)}
-
-					{/* Quick Info */}
-					<div className="flex flex-wrap gap-4 mb-6 text-sm text-muted-foreground">
-						{movie.release_date && (
-							<span>{new Date(movie.release_date).getFullYear()}</span>
-						)}
-						{movie.duration && <span>{movie.duration} minutes</span>}
-						{movie.rating && <span>Rating: {movie.rating.toFixed(1)}</span>}
-					</div>
-
-					{/* Genres */}
-					{genres.length > 0 && (
-						<div className="mb-6">
-							<div className="flex flex-wrap gap-2">
-								{genres.map((genre) => (
-									<span
-										key={genre.id}
-										className="px-3 py-1 bg-primary/10 rounded-full text-sm">
-										{locale === 'he' ? genre.hebrew_name : genre.name}
-									</span>
-								))}
-							</div>
-						</div>
-					)}
-
-					{/* Synopsis */}
-					{movie.synopsis && (
-						<p className="mb-6 text-muted-foreground">{movie.synopsis}</p>
-					)}
-
-					{/* Action Buttons */}
-					<div className="flex flex-wrap gap-4">
-						<TicketBooking
-							movieId={movie.id}
-							movieTitle={movie.title}
-							posterUrl={movie.poster_url}
-							countitPid={countitPid}
-							isRtl={isRtl}
-						/>
-
-						<MovieActions
-							movieId={movie.id}
-							trailerUrl={trailer?.url || movie.trailer_url}
-						/>
-					</div>
-				</div>
-			</div>
-
-			{/* Cast Section */}
-			{cast.length > 0 && (
-				<section className="mb-12">
-					<CastCarousel cast={cast} locale={locale as Locale} />
-				</section>
-			)}
-
-			{/* Awards Section */}
-			{awards.length > 0 && (
-				<section className="mb-12">
-					<h2 className="text-2xl font-semibold mb-6">Awards</h2>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						{awards.map((award) => (
-							<div
-								key={`${award.id}-${award.year}`}
-								className="p-4 rounded-lg bg-card">
-								<h3 className="font-medium">{award.name}</h3>
-								<p className="text-sm text-muted-foreground">
-									{award.category} ({award.year})
-								</p>
-								{award.is_winner && (
-									<span className="inline-block px-2 py-1 mt-2 text-xs bg-primary/10 rounded-full">
-										Winner
-									</span>
-								)}
-							</div>
-						))}
-					</div>
-				</section>
-			)}
-
-			{/* Recommended Movies */}
-			{similarMovies.length > 0 && (
-				<section>
-					<h2 className="text-2xl font-semibold mb-6">
-						{t('recommendedMovies')}
-					</h2>
-					<MovieSlider movies={similarMovies} locale={locale as Locale} />
-				</section>
-			)}
-		</div>
+		<MovieAffiliateWebsite
+			movie={transformedMovie}
+			showtimes={defaultShowtimes}
+			locale={locale as "en" | "he"}
+		/>
 	);
 }
