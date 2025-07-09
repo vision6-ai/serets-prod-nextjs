@@ -4,14 +4,9 @@ import { TheaterContent } from '@/components/theaters/theater-content'
 import { unstable_setRequestLocale } from 'next-intl/server'
 import { Theater, TheaterMovie, Movie } from '@/types/theater'
 import { Database } from '@/types/supabase'
+import { getLocalizedField, formatTmdbImageUrl } from '@/utils/localization'
 
 export const revalidate = 3600
-
-// Helper function to get localized field
-function getLocalizedField(enField: string | null, heField: string | null, locale: string): string | null {
-	if (locale === 'he' && heField) return heField;
-	return enField || heField;
-}
 
 interface MovieWithGenres extends Movie {
   genres?: { name: string; slug: string }[]
@@ -106,7 +101,7 @@ async function getTheaterData(slug: string, locale: string = 'en') {
         release_date: movie.release_date || movie.israeli_release_date,
         duration: movie.runtime,
         rating: movie.vote_average,
-        poster_url: getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale),
+        poster_url: formatTmdbImageUrl(getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale)),
         slug: movie.slug,
         genres: genresByMovie[movie.id] || []
       }
@@ -143,7 +138,7 @@ async function getTheaterData(slug: string, locale: string = 'en') {
     movies: {
       id: movie.id,
       title: getLocalizedField(movie.title_en, movie.title_he, locale) || movie.slug,
-      poster_url: getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale),
+      poster_url: formatTmdbImageUrl(getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale)),
       slug: movie.slug
     }
   })) || []

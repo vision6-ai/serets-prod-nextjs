@@ -3,9 +3,13 @@
 import { Link } from '@/app/i18n';
 import type { Movie } from '@/types/movie';
 import { Locale } from '@/config/i18n';
+import { getLocalizedField, formatTmdbImageUrl } from '@/utils/localization';
 
 interface MovieListProps {
-	movies: Movie[];
+	movies: (Movie & {
+		poster_path_en?: string | null;
+		poster_path_he?: string | null;
+	})[];
 	locale?: Locale;
 }
 
@@ -13,6 +17,11 @@ export function MovieList({ movies, locale = 'en' }: MovieListProps) {
 	return (
 		<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
 			{movies.map((movie) => {
+				// Get poster URL from localized poster paths
+				const posterUrl = formatTmdbImageUrl(
+					getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale)
+				);
+
 				return (
 					<Link
 						key={movie.id}
@@ -20,9 +29,9 @@ export function MovieList({ movies, locale = 'en' }: MovieListProps) {
 						locale={locale}
 						className="group block overflow-hidden rounded-lg transition-all hover:scale-105">
 						<div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-muted">
-							{movie.poster_url ? (
+							{posterUrl ? (
 								<img
-									src={movie.poster_url}
+									src={posterUrl}
 									alt={movie.title}
 									className="object-cover w-full h-full transition-all"
 									loading="lazy"

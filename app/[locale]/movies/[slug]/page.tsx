@@ -6,14 +6,9 @@ import { Locale } from '@/config/i18n';
 import { unstable_setRequestLocale } from 'next-intl/server';
 import type { Movie } from '@/types/movie';
 import { getRecommendedMovies } from '@/lib/recommendations';
+import { getLocalizedField, formatTmdbImageUrl } from '@/utils/localization';
 
 export const revalidate = 3600;
-
-// Helper function to get localized field
-function getLocalizedField(enField: string | null, heField: string | null, locale: Locale): string | null {
-	if (locale === 'he' && heField) return heField;
-	return enField || heField;
-}
 
 async function getMovieData(slug: string, locale: Locale) {
 	const supabase = createClient<Database>(
@@ -124,7 +119,7 @@ async function getMovieData(slug: string, locale: Locale) {
 		title: getLocalizedField(movie.title_en, movie.title_he, locale) || movie.slug,
 		hebrew_title: movie.title_he || movie.title_en || movie.slug,
 		synopsis: getLocalizedField(movie.overview_en, movie.overview_he, locale),
-		poster_url: getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale),
+		poster_url: formatTmdbImageUrl(getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale)),
 		backdrop_url: movie.backdrop_path,
 		trailer_url: mainTrailer ? `https://www.youtube.com/watch?v=${mainTrailer.video_key}` : null,
 		countit_pid: movie.countit_pid,

@@ -8,6 +8,7 @@ import { TicketBooking } from '.';
 import type { Movie } from '@/types/movie';
 import { Locale } from '@/config/i18n';
 import { useTranslations } from 'next-intl';
+import { getLocalizedField, formatTmdbImageUrl } from '@/utils/localization';
 
 interface MovieContentProps {
 	movie: Movie & {

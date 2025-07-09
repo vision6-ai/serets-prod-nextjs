@@ -3,6 +3,7 @@ import { GenreContent } from './genre-content'
 import { notFound } from 'next/navigation'
 import type { Movie } from '@/types/movie'
 import { Database } from '@/types/supabase'
+import { getLocalizedField, formatTmdbImageUrl } from '@/utils/localization'
 
 export const revalidate = 3600
 
@@ -10,12 +11,6 @@ interface Genre {
   id: number
   name: string
   slug: string
-}
-
-// Helper function to get localized field
-function getLocalizedField(enField: string | null, heField: string | null, locale: string): string | null {
-	if (locale === 'he' && heField) return heField;
-	return enField || heField;
 }
 
 async function getGenreData(slug: string, locale: string = 'en'): Promise<{ genre: Genre; movies: Movie[] } | null> {
@@ -98,7 +93,7 @@ async function getGenreData(slug: string, locale: string = 'en'): Promise<{ genr
       release_date: movie.release_date,
       duration: movie.runtime,
       rating: movie.vote_average,
-      poster_url: getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale),
+      poster_url: formatTmdbImageUrl(getLocalizedField(movie.poster_path_en, movie.poster_path_he, locale)),
       trailer_url: null, // Will be populated from movie_videos if needed
       slug: movie.slug,
     }
